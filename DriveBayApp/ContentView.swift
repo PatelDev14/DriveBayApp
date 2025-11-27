@@ -1,16 +1,24 @@
+//
+//  ContentView.swift
+//  DriveBayApp
+//
+//  Created by Dev Patel on 2025-11-22.
+//
+
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var authService: AuthService
-    
     var body: some View {
         VStack {
-            Text("Welcome to DriveBay!")
-                .font(.largeTitle)
-            Button("Sign Out") {
-                try? authService.signOut()
-            }
-            .padding()
+            Image(systemName: "globe")
+                .imageScale(.large)
+                .foregroundStyle(.tint)
+            Text("Hello, world!")
         }
+        .padding()
     }
+}
+
+#Preview {
+    ContentView()
 }

@@ -1,4 +1,0 @@
-cd desktop
-cd projects
-cd drivebayapp
-open DriveBayApp.xcworkspace
