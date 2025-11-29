@@ -1,50 +1,89 @@
 import SwiftUI
 import FirebaseCore
+// NOTE: If you enable Firebase App Check, you would need to import that SDK here as well.
+// import FirebaseAppCheck
+// And then configure it within the init() block.
+
+// MARK: - App Configuration
+
+// Real placeholder listings (auto ID thanks to your Listing init in DataModels.swift)
+private let placeholderListings: [Listing] = [
+    Listing(
+        ownerId: "dummy1",
+        address: "123 Ocean Drive",
+        city: "Miami",
+        state: "FL",
+        zipCode: "33139",
+        country: "USA",
+        description: "Prime beachfront parking",
+        rate: 8.0,
+        date: Date(), // Must provide a Date for the struct to compile
+        startTime: "09:00",
+        endTime: "18:00",
+        contactEmail: "miami@example.com"
+    ),
+    Listing(
+        ownerId: "dummy2",
+        address: "456 Palm Avenue",
+        city: "Los Angeles",
+        state: "CA",
+        zipCode: "90210",
+        country: "USA",
+        description: "Downtown spot",
+        rate: 12.0,
+        date: Date(), // Must provide a Date for the struct to compile
+        startTime: "08:00",
+        endTime: "20:00",
+        contactEmail: "la@example.com"
+    )
+]
 
 @main
 struct DriveBayAppApp: App {
     @StateObject private var authService = AuthService()
+    
+    // Initialize ChatViewModel once here, passing static data and a static handler
     @StateObject private var chatViewModel: ChatViewModel
 
-    private static let placeholderListings: [Listing] = []
-
-    private static func handleBookingRequestStatic(
-        listing: Listing,
-        startTime: Date,
-        endTime: Date
-    ) async throws {
-        print("Booking requested for \(listing.name) from \(startTime) to \(endTime)")
-        // Example: try await BookingService.submitBooking(listing, startTime, endTime)
-    }
-
     init() {
+        // 1. Configure Firebase services immediately
         FirebaseApp.configure()
-
+        
+        // 2. Define the static booking handler for the ViewModel
         let bookingHandler: (Listing, Date, Date) async throws -> Void = { listing, start, end in
-            try await DriveBayAppApp.handleBookingRequestStatic(
-                listing: listing,
-                startTime: start,
-                endTime: end
-            )
+            print("Booking requested for \(listing.address) from \(start) to \(end)")
+            // ⭐️ PLACEHOLDER: Integrate your real BookingService call here ⭐️
+            // try await BookingService.submitBooking(listing, start, end)
         }
-
+        
+        // 3. Initialize the StateObject wrapper with the configured ViewModel
         _chatViewModel = StateObject(
             wrappedValue: ChatViewModel(
-                marketplaceListings: DriveBayAppApp.placeholderListings,
-                requestBooking: bookingHandler
+                marketplaceListings: placeholderListings, // Pass the static data
+                requestBooking: bookingHandler             // Pass the handler closure
             )
         )
     }
 
     var body: some Scene {
         WindowGroup {
-            // ⭐️ FIX: Correct if-else syntax for the ViewBuilder ⭐️
+            // Use the authentication state to switch between views
             if authService.isLoggedIn {
-                // Pass the chatViewModel and provide the correct action closure for onLogout
-                ChatView(chatViewModel: chatViewModel, onLogout: {
-                    authService.isLoggedIn = false
-                })
-                .environmentObject(authService) // Apply modifier to the view
+                ChatView(
+                    chatViewModel: chatViewModel,
+                    // Sign-out logic handles the async call safely
+                    onLogout: {
+                        Task {
+                            do {
+                                try authService.signOut()
+                            } catch {
+                                // Provide user feedback on sign-out failure
+                                print("Sign out failed: \(error)")
+                            }
+                        }
+                    }
+                )
+                .environmentObject(authService)
             } else {
                 LoginView()
                     .environmentObject(authService)

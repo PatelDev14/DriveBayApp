@@ -1,0 +1,89 @@
+// Models/Listing.swift
+import FirebaseFirestore
+import Foundation
+import SwiftUI
+
+struct Listing: Identifiable, Codable {
+    var id: String
+    var ownerId: String
+    var address: String
+    var city: String
+    var state: String
+    var zipCode: String
+    var country: String
+    var description: String?
+    var rate: Double
+    var date: Date
+    var startTime: String
+    var endTime: String
+    var contactEmail: String
+    var createdAt: Timestamp?
+
+    // This init lets you skip 'id' — it auto-generates
+    init(
+        id: String = UUID().uuidString,
+        ownerId: String,
+        address: String,
+        city: String,
+        state: String,
+        zipCode: String,
+        country: String,
+        description: String? = nil,
+        rate: Double,
+        date: Date = Date(),
+        startTime: String,
+        endTime: String,
+        contactEmail: String,
+        createdAt: Timestamp? = nil
+    ) {
+        self.id = id
+        self.ownerId = ownerId
+        self.address = address
+        self.city = city
+        self.state = state
+        self.zipCode = zipCode
+        self.country = country
+        self.description = description
+        self.rate = rate
+        self.date = date
+        self.startTime = startTime
+        self.endTime = endTime
+        self.contactEmail = contactEmail
+        self.createdAt = createdAt
+    }
+
+    var identifiableID: String { id }
+
+    // MOVE THIS INSIDE THE STRUCT ← THIS IS THE FIX!
+    
+    var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)  // using your existing `date: Date` field
+    }
+}
+
+struct AnimatedGradientBackground: View {
+    var body: some View {
+        // Use a solid color placeholder for simplicity
+        Color.black
+    }
+}
+
+// Placeholder for the GlassCard container
+struct GlassCard<Content: View>: View {
+    let content: Content
+    
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+    
+    var body: some View {
+        // Simple background to resemble a card on a dark theme
+        content
+            .background(Color.white.opacity(0.15))
+            .cornerRadius(12)
+            .shadow(radius: 5)
+    }
+}

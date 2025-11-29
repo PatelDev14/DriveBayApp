@@ -36,6 +36,7 @@ struct ChatView: View {
     @State private var showPermissionModal: Bool = false
     @State private var showAccountMenu: Bool = false
     @State private var showingListingForm = false
+    @State private var shouldNavigateToDriveways = false
     
     var onLogout: () -> Void
 
@@ -43,25 +44,30 @@ struct ChatView: View {
     @Namespace private var bottomID
     
     var body: some View {
-        ZStack {
-            AnimatedBackground()
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                topBar
-                conversationArea
-                floatingInputPanel
-            }
-            
-            overlays
-        }
-        //.preferredColorScheme(.dark)
-        .preferredColorScheme(.dark)
-                .sheet(isPresented: $showingListingForm) {
-                    ListingFormView()
-                        .presentationDetents([.large])
-                        .presentationDragIndicator(.visible)
+        NavigationStack {
+            ZStack {
+                AnimatedBackground()
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    topBar
+                    conversationArea
+                    floatingInputPanel
                 }
+                
+                overlays
+            }
+            .preferredColorScheme(.dark)
+            .sheet(isPresented: $showingListingForm) {
+                ListingFormView()
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+            // This opens MyDrivewaysTab when "My Driveway" is tapped
+            .fullScreenCover(isPresented: $chatViewModel.showMyDriveways) {
+                MyDrivewaysTab()
+            }
+        }
     }
     
     // MARK: - Animated Background
@@ -95,17 +101,18 @@ struct ChatView: View {
                                 Button("My Bookings", systemImage: "list.bullet.clipboard") {
                                     print("My Bookings tapped")
                                 }
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
                                 
 //                                Button("My Driveway", systemImage: "house.fill") {
 //                                    print("My Driveway tapped")
 //                                }
-                    Button {
-                        showingListingForm = true
-                    } label: {
-                        Label("My Driveway", systemImage: "house.fill")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                    }
-                                
+                            Button {
+                                chatViewModel.showMyDriveways = true
+                                } label: {
+                                    Label("My Driveway", systemImage: "house.fill")
+                                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                                }
+                                            
                                 Divider()
                                 
                                 Button("Logout", systemImage: "arrow.right.square") {
@@ -144,7 +151,9 @@ struct ChatView: View {
                 LazyVStack(spacing: 20) {
                     if chatViewModel.messages.isEmpty {
                         WelcomeCard {
-                            chatViewModel.executeSearch(query: "Show me all available driveways")
+                            Task {
+                                await chatViewModel.sendMessage("Show me all available driveways")
+                            }
                         }
                         .padding(.top, 40)
                     }
@@ -178,25 +187,39 @@ struct ChatView: View {
                 GlassTextField(placeholder: "City", text: $city)
                 GlassTextField(placeholder: "State", text: $stateProvince)
             }
+            
             HStack(spacing: 12) {
                 GlassTextField(placeholder: "Zip Code", text: $zipCode)
                 GlassTextField(placeholder: "Country", text: $country)
             }
             
             HStack(spacing: 16) {
+                // "Near Me" Button
                 ActionButton(icon: "location.circle.fill", label: "Near Me", style: .outline) {
-                    chatViewModel.handleNearMeSearch(requestPermissionAction: {
-                        withAnimation { showPermissionModal = true }
-                    })
+                    chatViewModel.handleNearMeSearch()  // No parameters anymore
+                    
+                    // Show permission sheet if not granted
+                    if chatViewModel.permissionStatus != .granted {
+                        withAnimation(.spring()) {
+                            showPermissionModal = true
+                        }
+                    }
                 }
                 
+                // "Find Parking" Button
                 ActionButton(icon: "sparkles", label: "Find Parking", style: .filled) {
-                    chatViewModel.handleFormSearch(
-                        city: city,
-                        state: stateProvince,
-                        zipCode: zipCode,
-                        country: country
-                    )
+                    let query = [city, stateProvince, zipCode, country]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: ", ")
+                    
+                    if query.isEmpty {
+                        // Optional: show a little feedback
+                        return
+                    }
+                    
+                    Task {
+                        await chatViewModel.sendMessage("Find parking in \(query)")
+                    }
                 }
                 .shadow(color: DriveBayTheme.accent.opacity(0.5), radius: 12, y: 6)
             }
@@ -441,3 +464,4 @@ struct ScaleButtonStyle: ButtonStyle {
             .animation(.spring(response: 0.3), value: configuration.isPressed)
     }
 }
+

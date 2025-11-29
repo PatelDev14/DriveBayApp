@@ -1,57 +1,54 @@
 // DataModels.swift
-
 import Foundation
-import SwiftUI // Used for Color, Identifiable
+import SwiftUI
+import FirebaseFirestore
+// ... (Your existing code: Listing, ParkingLocation, ParkingResults, ChatMessage, ChatRole, PermissionState)
 
-// MARK: - 1. Core Listing Types
+// MARK: - 3. Gemini Response Types (For Structured Email Output)
 
-// Represents a driveway listing from your marketplace (equivalent to TypeScript 'Listing')
-struct Listing: Identifiable, Codable {
-    let id: String
-    let name: String
-    let address: String
-    let pricePerHour: Double
-    let details: String
-    let website: String?
-    // Add other fields from your original Listing type if needed
+// Single response for booking request, denial, and listing confirmation emails
+struct SingleEmailResponse: Codable {
+    let subject: String
+    let body: String // Changed from 'emailContent' for consistency with JS, but 'body' works fine too.
 }
 
-// Represents a search result (Marketplace or Web) (equivalent to TypeScript 'ParkingLocation')
-struct ParkingLocation: Decodable, Identifiable {
-    var id: String { name + address } // Simple composite ID for SwiftUI
-    let name: String
-    let address: String
-    let details: String
-    let website: String?
-    let listingId: String? // Only for Marketplace results
+// Multi-part response for booking confirmation and cancellation emails
+struct ConfirmationEmailsResponse: Codable {
+    let bookerSubject: String
+    let bookerEmailContent: String
+    let ownerSubject: String
+    let ownerEmailContent: String
 }
 
-// Represents the full search result from the Gemini model (equivalent to TypeScript 'ParkingResults')
+// ⚠️ Note on ParkingResults: Your existing ParkingResults struct is correct.
+/*
 struct ParkingResults: Decodable {
     let marketplaceResults: [ParkingLocation]
     let webResults: [ParkingLocation]
 }
+*/
+// However, to strictly match the previous Swift response, we should use the specific structs
+// defined for the output, even if they are structurally similar to ParkingLocation.
 
-// MARK: - 2. Chat and State Types
-
-// Represents a message in the chat (equivalent to TypeScript 'ChatMessage')
-struct ChatMessage: Identifiable, Decodable {
-    let id = UUID() // Use UUID for SwiftUI list stability
-    let role: ChatRole
-    let content: String
-    let timestamp: Date // Use Date instead of ISO string
-    
-    enum CodingKeys: String, CodingKey {
-        case role, content, timestamp
-    }
+struct ParkingMarketplaceResult: Codable {
+    let listingId: String
+    let name: String
+    let address: String
+    let details: String
 }
 
-// Represents the role of the message sender (equivalent to TypeScript 'ChatRole')
-enum ChatRole: String, Decodable {
-    case user
-    case model
-    case system // Used for internal notifications/errors
+struct ParkingWebResult: Codable {
+    let name: String
+    let address: String
+    let details: String
+    let website: String?
 }
 
-// Represents the status of Geolocation permission
-typealias PermissionState = String // 'prompt', 'granted', 'denied'
+// Re-defining ParkingResults to use the structured results exactly as designed for Gemini
+struct GeminiParkingResponse: Codable {
+    let marketplaceResults: [ParkingMarketplaceResult]
+    let webResults: [ParkingWebResult]
+}
+
+// Suggestion: Since your existing `ParkingResults` and `ParkingLocation` are simpler,
+// I recommend leaving them as is for your UI and using `GeminiParkingResponse` for the API.

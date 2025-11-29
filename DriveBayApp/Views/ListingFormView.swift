@@ -1,459 +1,366 @@
 // Views/ListingFormView.swift
 import SwiftUI
-import FirebaseFirestore
-import Combine
 import FirebaseAuth
+import FirebaseFirestore
 
 struct ListingFormView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ListingFormViewModel()
     
+    
+    init(editingListing: Listing? = nil) {
+            let vm = ListingFormViewModel()
+            if let listing = editingListing {
+                vm.loadListing(listing)
+            }
+            _viewModel = StateObject(wrappedValue: vm)
+        }
+
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 32) {
-                    // Header
-                    header
-                    
-                    // Validation Error
-                    if let error = viewModel.validationError {
-                        errorBanner(error: error)
+        ScrollView {
+            VStack(spacing: 32) {
+                // MARK: - Header
+                VStack(spacing: 16) {
+                    Image(systemName: "car.fill")
+                        .font(.system(size: 60))
+                        .foregroundStyle(.indigo)
+                        .shadow(color: .indigo.opacity(0.3), radius: 20, y: 10)
+
+                    VStack(spacing: 8) {
+                        Text("List Your Driveway")
+                            .font(.largeTitle.bold())
+                            .foregroundColor(.primary)
+
+                        Text("Earn money by renting out your parking spot")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
-                    
-                    // Section 1: Location Details
-                    locationSection
-                    
-                    // Section 2: Availability & Pricing
-                    availabilitySection
-                    
-                    // Section 3: Details & Contact
-                    detailsSection
-                    
-                    // Submit Button
-                    submitButton
                 }
-                .padding(24)
-                .padding(.bottom, 40)
+                .padding(.top, 20)
+
+                // MARK: - Error Banner
+                if let error = viewModel.validationError {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                        Text(error)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(.red.opacity(0.15))
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(.red.opacity(0.4), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+                }
+
+                // MARK: - Sections
+                locationSection
+                availabilitySection
+                detailsSection
+
+                // MARK: - Submit Button
+                Button {
+                    viewModel.submit()
+                } label: {
+                    HStack {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "paperplane.fill")
+                        }
+                        Text(viewModel.isLoading ? "Submitting..." : "Add My Driveway")
+                            .font(.title3.bold())
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(
+                        LinearGradient(
+                            colors: [.indigo, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .foregroundColor(.white)
+                    .cornerRadius(20)
+                    .shadow(color: .purple.opacity(0.5), radius: 20, y: 10)
+                }
+                .disabled(viewModel.isLoading)
+                .padding(.horizontal, 24)
+                .padding(.top, 10)
+                .padding(.bottom, 60)
             }
-            .background(
-                LinearGradient(
-                    colors: [Color(.systemGray6), .white],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+            .padding(.horizontal, 20)
+        }
+        .background(
+            LinearGradient(
+                colors: [Color(.systemBackground), Color(.systemGray6)],
+                startPoint: .top,
+                endPoint: .bottom
             )
-            .navigationTitle("List Your Driveway")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
-        }
-        .preferredColorScheme(.light)
-    }
-    
-    // MARK: - Header
-    private var header: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "house.fill")
-                    .font(.title2)
-                    .foregroundColor(.indigo)
-                Text("List Your Driveway")
-                    .font(.title2.bold())
-                    .foregroundColor(.primary)
-            }
-            
-            Text("Provide all necessary information to list your spot on DriveBay.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-    }
-    
-    // MARK: - Error Banner
-    private func errorBanner(error: String) -> some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.red)
-            Text(error)
-                .font(.subheadline)
-                .foregroundColor(.red.opacity(0.9))
-            Spacer()
-        }
-        .padding(16)
-        .background(Color.red.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+            .ignoresSafeArea()
         )
-    }
-    
-    // MARK: - Section 1: Location Details
-    private var locationSection: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            sectionHeader(title: "Location Details", icon: "mappin.and.ellipse")
-            
-            // Row 1: Address + City
-            HStack(spacing: 16) {
-                glassTextField(
-                    title: "Street Address*",
-                    icon: "mappin.circle.fill",
-                    text: $viewModel.address,
-                    placeholder: "e.g., 123 Main St"
-                )
-                .frame(maxWidth: .infinity)
-                
-                glassTextField(
-                    title: "City*",
-                    text: $viewModel.city,
-                    placeholder: "e.g., Anytown"
-                )
-                .frame(maxWidth: .infinity)
+        .navigationTitle("List Your Driveway")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .fontWeight(.medium)
+                .foregroundColor(.indigo)
             }
-            
-            // Row 2: State + Zip + Country
-            HStack(spacing: 16) {
-                glassTextField(
-                    title: "State / Province*",
-                    text: $viewModel.state,
-                    placeholder: "e.g., CA / ON"
-                )
-                .frame(maxWidth: .infinity)
-                
-                glassTextField(
-                    title: "Zip / Postal Code*",
-                    text: $viewModel.zipCode,
-                    placeholder: "e.g., 90210"
-                )
-                .frame(maxWidth: .infinity)
-                
-                Picker("Country*", selection: $viewModel.country) {
+        }
+        .onAppear {
+            viewModel.onSuccess = { dismiss() }
+        }
+    }
+
+    // MARK: - Location Section
+    private var locationSection: some View {
+        SectionView(title: "Location Details", icon: "mappin.and.ellipse") {
+            VStack(spacing: 16) {
+                InputField(title: "Street Address*", placeholder: "123 Ocean Drive", text: $viewModel.address)
+                InputField(title: "City*", placeholder: "Miami", text: $viewModel.city)
+
+                HStack(spacing: 16) {
+                    InputField(title: "State*", placeholder: "FL", text: $viewModel.state)
+                    InputField(title: "Zip Code*", placeholder: "33139", text: $viewModel.zipCode)
+                }
+
+                Picker("Country", selection: $viewModel.country) {
                     Text("USA").tag("USA")
                     Text("Canada").tag("Canada")
                 }
-                .pickerStyle(.menu)
-                .frame(maxWidth: .infinity)
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 4)
             }
         }
     }
+
+    // MARK: - Availability Section
+//    private var availabilitySection: some View {
+//        SectionView(title: "Availability & Pricing", icon: "calendar.badge.clock") {
+//            VStack(spacing: 20) {
+//                HStack(spacing: 16) {
+//                    VStack(alignment: .leading, spacing: 8) {
+//                        Text("Date")
+//                            .font(.subheadline.bold())
+//                        DatePicker("", selection: $viewModel.date, displayedComponents: .date)
+//                            .datePickerStyle(.compact)
+//                            .labelsHidden()
+//                            .padding(12)
+//                            .background(.ultraThinMaterial)
+//                            .cornerRadius(14)
+//                    }
+//
+//                    InputField(title: "Start Time*", placeholder: "09:00", text: $viewModel.startTime)
+//                        .keyboardType(.numbersAndPunctuation)
+//
+//                    InputField(title: "End Time*", placeholder: "18:00", text: $viewModel.endTime)
+//                        .keyboardType(.numbersAndPunctuation)
+//                }
+//
+//                VStack(alignment: .leading, spacing: 12) {
+//                    HStack {
+//                        Image(systemName: "dollarsign.circle.fill")
+//                            .foregroundColor(.green)
+//                            .font(.title2)
+//                        Text("Rate per Hour")
+//                            .font(.headline)
+//                    }
+//
+//                    HStack {
+//                        TextField("$10.00", text: $viewModel.rate)
+//                            .keyboardType(.decimalPad)
+//                            .frame(width: 120)
+//                            .padding(14)
+//                            .background(.ultraThinMaterial)
+//                            .cornerRadius(14)
+//                            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.quaternary))
+//
+//                        Spacer()
+//
+//                        ScrollView(.horizontal, showsIndicators: false) {
+//                            HStack(spacing: 12) {
+//                                ForEach(ListingFormViewModel.presetRates, id: \.self) { rate in
+//                                    Button("$\(rate)") {
+//                                        viewModel.rate = String(rate) + ".00"
+//                                    }
+//                                    .font(.caption.bold())
+//                                    .padding(.horizontal, 20)
+//                                    .padding(.vertical, 12)
+//                                    .background(
+//                                        viewModel.rate.hasPrefix(String(rate)) ?
+//                                        Color.indigo : Color(.systemGray5)
+//                                    )
+//                                    .foregroundColor(.white)
+//                                    .cornerRadius(14)
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
     
-    // MARK: - Section 2: Availability & Pricing
     private var availabilitySection: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            sectionHeader(title: "Availability & Pricing", icon: "calendar.badge.clock")
-            
-            // Date + Times Row
-            HStack(spacing: 16) {
+        SectionView(title: "Availability & Pricing", icon: "calendar.badge.clock") {
+            VStack(spacing: 24) {
+                
+                // MARK: - Date Picker (Full Width)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Date*")
+                    Text("Date")
                         .font(.subheadline.bold())
-                    DatePicker("", selection: $viewModel.date, in: Date()..., displayedComponents: .date)
+                    DatePicker("", selection: $viewModel.date, displayedComponents: .date)
                         .datePickerStyle(.compact)
                         .labelsHidden()
+                        .padding(14)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(14)
                 }
-                .frame(maxWidth: .infinity)
+
+//                // MARK: - Start & End Time (Side by Side)
+//                HStack(spacing: 16) {
+//                    InputField(title: "Start Time*", placeholder: "09:00", text: $viewModel.startTime)
+//                        .keyboardType(.numbersAndPunctuation)
+//
+//                    InputField(title: "End Time*", placeholder: "18:00", text: $viewModel.endTime)
+//                        .keyboardType(.numbersAndPunctuation)
+//                }
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Start Time*")
-                        .font(.subheadline.bold())
-                    TextField("09:00", text: $viewModel.startTime)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.roundedBorder)
+                // MARK: - Start & End Time with Gorgeous 24-Hour Clock Picker
+                HStack(spacing: 20) {
+                    ClockPicker(title: "Start Time", selection: $viewModel.startTime)
+                    ClockPicker(title: "End Time", selection: $viewModel.endTime)
                 }
-                .frame(maxWidth: .infinity)
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("End Time*")
-                        .font(.subheadline.bold())
-                    TextField("17:30", text: $viewModel.endTime)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.roundedBorder)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            
-            // Rate
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Image(systemName: "dollarsign.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.title3)
-                    Text("Rate per Hour ($)*")
-                        .font(.subheadline.bold())
-                }
-                
-                HStack {
-                    TextField("6.50", text: $viewModel.rate)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 100)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 8) {
+                .padding(.horizontal, 4)
+
+                // MARK: - Rate per Hour
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Rate per Hour")
+                        .font(.headline)
+                        .foregroundColor(.white.opacity(0.9))
+
+                    Menu {
                         ForEach(ListingFormViewModel.presetRates, id: \.self) { rate in
-                            Button {
+                            Button("$\(rate)") {
                                 viewModel.rate = "\(rate).00"
-                            } label: {
-                                Text("$\(rate)")
-                                    .font(.caption.bold())
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        viewModel.rate == "\(rate).00" ?
-                                        Color.green :
-                                        Color.gray.opacity(0.2)
-                                    )
-                                    .foregroundColor(
-                                        viewModel.rate == "\(rate).00" ? .white : .primary
-                                    )
-                                    .clipShape(Capsule())
                             }
                         }
+                    } label: {
+                        HStack {
+                            Text(viewModel.rate.isEmpty ? "Select rate" : "$\(viewModel.rate)")
+                                .foregroundColor(.white)
+                            Spacer()
+                            Image(systemName: "chevron.down")
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.2))
+                        )
                     }
                 }
+
             }
+            .padding(.vertical, 8)
         }
     }
-    
-    // MARK: - Section 3: Details & Contact
+
+    // MARK: - Details Section
     private var detailsSection: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            sectionHeader(title: "Details & Contact", icon: "info.circle")
-            
-            // Description
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Description (Optional)")
-                    .font(.subheadline.bold())
-                TextEditor(text: $viewModel.description)
-                    .frame(minHeight: 100, maxHeight: 120)
-                    .padding(12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                HStack {
-                    Spacer()
-                    Text("\(viewModel.description.count)/200")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+        SectionView(title: "Details & Contact", icon: "info.circle.fill") {
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Description (Optional)")
+                        .font(.headline)
+
+                    TextEditor(text: $viewModel.description)
+                        .frame(height: 110)
+                        .padding(8)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(14)
+                        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.quaternary))
+
+                    HStack {
+                        Spacer()
+                        Text("\(viewModel.description.count)/200")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
                 }
-            }
-            
-            // Contact Email
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "envelope.fill")
-                        .foregroundColor(.red)
-                        .font(.title3)
-                    Text("Contact Email*")
-                        .font(.subheadline.bold())
-                }
-                TextField("owner@driveway.com", text: $viewModel.contactEmail)
+
+                InputField(title: "Contact Email*", placeholder: "you@example.com", text: $viewModel.contactEmail)
                     .keyboardType(.emailAddress)
                     .textContentType(.emailAddress)
-                    .textFieldStyle(.roundedBorder)
-                
-                HStack(spacing: 6) {
+
+                HStack(spacing: 8) {
                     Image(systemName: "lock.fill")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("This email is used for booking notifications only.")
+                    Text("Used only for booking notifications")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
         }
     }
-    
-    // MARK: - Submit Button
-    private var submitButton: some View {
-        Button(action: viewModel.submit) {
+
+    // MARK: - Reusable Components
+    @ViewBuilder
+    private func SectionView<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                        .tint(.white)
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
-                }
-                Text(viewModel.isLoading ? "Submitting..." : "Add My Driveway")
-                    .font(.headline.bold())
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(.indigo)
+                Text(title)
+                    .font(.title3.bold())
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    colors: [Color.blue, Color.indigo],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
+            .padding(.horizontal, 4)
+
+            VStack(spacing: 16) {
+                content()
+            }
+            .padding(20)
+            .background(.ultraThinMaterial)
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .strokeBorder(.quaternary, lineWidth: 1)
             )
-            .foregroundColor(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .blue.opacity(0.4), radius: 12, y: 6)
-        }
-        .disabled(viewModel.isLoading)
-        .padding(.top, 20)
-    }
-    
-    // MARK: - Helpers
-    private func sectionHeader(title: String, icon: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(.indigo)
-            Text(title)
-                .font(.title3.bold())
-                .foregroundColor(.primary)
+            .padding(.horizontal, 4)
         }
     }
-    
-    private func glassTextField(
-        title: String = "",
-        icon: String = "",
-        text: Binding<String>,
-        placeholder: String = ""
-    ) -> some View {
+
+    private func InputField(title: String, placeholder: String, text: Binding<String>, keyboardType: UIKeyboardType = .default) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            if !title.isEmpty {
-                HStack(spacing: 8) {
-                    if !icon.isEmpty {
-                        Image(systemName: icon)
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
-                    Text(title)
-                        .font(.subheadline.bold())
-                        .foregroundColor(.primary)
-                }
-            }
+            Text(title)
+                .font(.subheadline.bold())
             TextField(placeholder, text: text)
-                .padding(14)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                )
+                .keyboardType(keyboardType)
+                .padding(16)
+                .background(.ultraThinMaterial)
+                .cornerRadius(14)
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.quaternary))
         }
     }
 }
 
-class ListingFormViewModel: ObservableObject {
-    
-    static let presetRates = [1, 3, 5, 7, 10]
-    
-    @Published var address = ""
-    @Published var city = ""
-    @Published var state = ""
-    @Published var zipCode = ""
-    @Published var country = "USA"
-    @Published var description = ""
-    @Published var rate = "5.00"
-    @Published var date = Date()
-    @Published var startTime = "09:00"
-    @Published var endTime = "17:30"
-    @Published var contactEmail = ""
-    
-    @Published var isLoading = false
-    @Published var validationError: String?
-    
-    // Add this callback so the View can dismiss itself
-    var onSuccess: (() -> Void)?
-    
-    func submit() {
-        validationError = nil
-        
-        // 1. Basic validation
-        guard !address.isEmpty, !city.isEmpty, !state.isEmpty, !zipCode.isEmpty,
-              !rate.isEmpty, !startTime.isEmpty, !endTime.isEmpty, !contactEmail.isEmpty else {
-            validationError = "Please fill out all required fields."
-            return
-        }
-        
-        // 2. Rate validation
-        guard let rateValue = Double(rate), rateValue > 0 else {
-            validationError = "Rate must be a positive number."
-            return
-        }
-        
-        // 3. Time validation
-        guard validateTime(startTime) && validateTime(endTime) else {
-            validationError = "Please enter times in valid HH:MM format (e.g., 09:00)."
-            return
-        }
-        
-        guard timeToMinutes(startTime) < timeToMinutes(endTime) else {
-            validationError = "End time must be after start time."
-            return
-        }
-        
-        // Submit
-        isLoading = true
-        
-        Task { @MainActor in
-            do {
-                try await saveToFirebase(rate: rateValue)
-                // Success → tell the View to dismiss
-                onSuccess?()
-            } catch {
-                validationError = "Failed to save: \(error.localizedDescription)"
-            }
-            isLoading = false
-        }
-    }
-    
-    private func validateTime(_ time: String) -> Bool {
-        let components = time.split(separator: ":")
-        guard components.count == 2,
-              let hours = Int(components[0]), hours >= 0 && hours <= 23,
-              let minutes = Int(components[1]), minutes >= 0 && minutes <= 59 else {
-            return false
-        }
-        return true
-    }
-    
-    private func timeToMinutes(_ time: String) -> Int {
-        let components = time.split(separator: ":")
-        guard components.count == 2,
-              let hours = Int(components[0]),
-              let minutes = Int(components[1]) else {
-            return -1
-        }
-        return hours * 60 + minutes
-    }
-    
-    private func saveToFirebase(rate: Double) async throws {
-        guard let user = Auth.auth().currentUser else {
-            throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "You must be logged in"])
-        }
-        
-        let listing: [String: Any] = [
-            "ownerId": user.uid,
-            "address": address,
-            "city": city,
-            "state": state,
-            "zipCode": zipCode,
-            "country": country,
-            "description": description,
-            "rate": rate,
-            "date": Timestamp(date: date),
-            "startTime": startTime,
-            "endTime": endTime,
-            "contactEmail": contactEmail,
-            "createdAt": FieldValue.serverTimestamp()
-        ]
-        
-        let db = Firestore.firestore()
-        _ = try await db.collection("listings").addDocument(data: listing)
+#Preview {
+    NavigationStack {
+        ListingFormView()
     }
 }
