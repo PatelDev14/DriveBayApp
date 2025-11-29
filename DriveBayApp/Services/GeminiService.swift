@@ -1,8 +1,5 @@
 import Foundation
 
-// NOTE: Ensure 'GeminiResponseModels.swift' and 'GeminiServiceError.swift'
-// are correctly included in your project target.
-
 actor GeminiService {
     
     private let apiKey: String
