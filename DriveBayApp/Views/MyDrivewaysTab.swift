@@ -8,6 +8,8 @@ struct MyDrivewaysTab: View {
     @State private var listings: [Listing] = []
     @State private var selectedListing: Listing?
     @State private var showingEditForm = false
+    @State private var listingToDelete: Listing?
+    @State private var showingDeleteAlert = false
 
     var body: some View {
         NavigationStack {
@@ -21,21 +23,12 @@ struct MyDrivewaysTab: View {
                     ScrollView {
                         LazyVStack(spacing: 16) {
                             ForEach(listings) { listing in
-                                //drivewayCard(listing)
-//                                    .onTapGesture {
-//                                        selectedListing = listing
-//                                        showingEditForm = true
-//                                    }
                                 drivewayCard(listing)
                                     .onTapGesture {
                                         selectedListing = listing
-                                        DispatchQueue.main.async {
-                                            showingEditForm = true
-                                        }
+                                        showingEditForm = true
                                     }
-
                             }
-                           
                         }
                         .padding()
                     }
@@ -63,11 +56,25 @@ struct MyDrivewaysTab: View {
             }
             .sheet(isPresented: $showingEditForm) {
                 ListingFormView(editingListing: selectedListing)
+                    .id(selectedListing?.id ?? "new")
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
+            .alert("Delete Driveway?", isPresented: $showingDeleteAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    if let listing = listingToDelete {
+                        deleteListingFromFirebase(listing)
+                    }
+                }
+            } message: {
+                Text("This driveway will be permanently removed.")
+            }
             .onAppear {
                 loadMyListings()
+            }
+            .onChange(of: showingEditForm) { _, closed in
+                if !closed { loadMyListings() }
             }
         }
         .preferredColorScheme(.dark)
@@ -94,12 +101,12 @@ struct MyDrivewaysTab: View {
         }
     }
 
-    // MARK: - Driveway Card (Rich & Beautiful)
+    // MARK: - Driveway Card WITH DELETE BUTTON
     @ViewBuilder
     private func drivewayCard(_ listing: Listing) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
-                // Header: Address + Edit Icon
+                // Header with Edit + Delete buttons
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(listing.address)
@@ -114,13 +121,27 @@ struct MyDrivewaysTab: View {
 
                     Spacer()
 
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(DriveBayTheme.accent)
-                        .shadow(color: DriveBayTheme.glow, radius: 10)
+                    HStack(spacing: 16) {
+                        // Edit Button
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(DriveBayTheme.accent)
+                            .shadow(color: DriveBayTheme.glow, radius: 10)
+
+                        // DELETE BUTTON — GORGEOUS & DANGEROUS
+                        Button {
+                            listingToDelete = listing
+                            showingDeleteAlert = true
+                        } label: {
+                            Image(systemName: "trash.fill")
+                                .font(.title2)
+                                .foregroundColor(.red)
+                                .shadow(color: .red.opacity(0.6), radius: 12)
+                        }
+                    }
                 }
 
-                // Date & Time Row
+                // Date & Time
                 HStack {
                     Label(listing.formattedDate, systemImage: "calendar")
                         .font(.subheadline.bold())
@@ -133,7 +154,7 @@ struct MyDrivewaysTab: View {
                         .foregroundColor(.white.opacity(0.9))
                 }
 
-                // Rate + Availability Status
+                // Rate
                 HStack {
                     Text("$\(String(format: "%.2f", listing.rate))/hour")
                         .font(.title2.bold())
@@ -150,7 +171,7 @@ struct MyDrivewaysTab: View {
                         .cornerRadius(8)
                 }
 
-                // Description (if exists)
+                // Description
                 if let desc = listing.description, !desc.trimmingCharacters(in: .whitespaces).isEmpty {
                     Text(desc)
                         .font(.body)
@@ -158,7 +179,7 @@ struct MyDrivewaysTab: View {
                         .lineLimit(3)
                 }
 
-                // Footer: Contact Email
+                // Contact
                 HStack {
                     Image(systemName: "envelope.fill")
                         .foregroundColor(.white.opacity(0.6))
@@ -173,6 +194,24 @@ struct MyDrivewaysTab: View {
         .padding(.horizontal)
     }
 
+    // MARK: - Delete from Firebase
+    private func deleteListingFromFirebase(_ listing: Listing) {
+        let id = listing.id
+
+        Firestore.firestore()
+            .collection("listings")
+            .document(id)
+            .delete { error in
+                if let error = error {
+                    print("Delete failed: \(error)")
+                } else {
+                    withAnimation {
+                        listings.removeAll { $0.id == id }
+                    }
+                }
+            }
+    }
+
     // MARK: - Load Listings
     private func loadMyListings() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
@@ -181,9 +220,13 @@ struct MyDrivewaysTab: View {
             .collection("listings")
             .whereField("ownerId", isEqualTo: uid)
             .order(by: "createdAt", descending: true)
-            .addSnapshotListener { snapshot, error in
-                guard let documents = snapshot?.documents else { return }
-                self.listings = documents.compactMap { try? $0.data(as: Listing.self) }
+            .addSnapshotListener { snapshot, _ in
+                guard let docs = snapshot?.documents else { return }
+                self.listings = docs.compactMap { try? $0.data(as: Listing.self) }
             }
     }
+}
+
+#Preview {
+    MyDrivewaysTab()
 }

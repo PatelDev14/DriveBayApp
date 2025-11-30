@@ -1,9 +1,6 @@
 import SwiftUI
 import FirebaseCore
-// NOTE: If you enable Firebase App Check, you would need to import that SDK here as well.
-// import FirebaseAppCheck
-// And then configure it within the init() block.
-
+import FirebaseAppCheck
 // MARK: - App Configuration
 
 // Real placeholder listings (auto ID thanks to your Listing init in DataModels.swift)
@@ -48,6 +45,10 @@ struct DriveBayAppApp: App {
     init() {
         // 1. Configure Firebase services immediately
         FirebaseApp.configure()
+        #if DEBUG
+        let providerFactory = AppCheckDebugProviderFactory()
+        AppCheck.setAppCheckProviderFactory(providerFactory)
+        #endif
         
         // 2. Define the static booking handler for the ViewModel
         let bookingHandler: (Listing, Date, Date) async throws -> Void = { listing, start, end in

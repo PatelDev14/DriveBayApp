@@ -1,7 +1,7 @@
 import SwiftUI
 import CoreLocation
 
-// MARK: - DriveBay Theme (Improved)
+// MARK: - DriveBay Theme (copy-paste this if you don’t have it in a separate file yet)
 struct DriveBayTheme {
     static let primary   = Color(red: 0.07, green: 0.18, blue: 0.36)
     static let secondary = Color(red: 0.28, green: 0.45, blue: 0.76)
@@ -18,12 +18,8 @@ struct DriveBayTheme {
     static let glassBorder = Color.white.opacity(0.15)
 }
 
-// MARK: - Button Style Enum (Was missing!)
-enum ButtonStyleType {
-    case filled, outline
-}
+enum ButtonStyleType { case filled, outline }
 
-// MARK: - MAIN CHAT VIEW (BEAUTIFUL + COMPILABLE)
 struct ChatView: View {
     @ObservedObject var chatViewModel: ChatViewModel
     
@@ -32,139 +28,102 @@ struct ChatView: View {
     @State private var zipCode: String = ""
     @State private var country: String = ""
     
-    @State private var listingToBook: String? = nil
-    @State private var showPermissionModal: Bool = false
-    @State private var showAccountMenu: Bool = false
-    @State private var showingListingForm = false
-    @State private var shouldNavigateToDriveways = false
+    @State private var showPermissionModal = false
     
     var onLogout: () -> Void
-
     
     @Namespace private var bottomID
     
     var body: some View {
         NavigationStack {
             ZStack {
-                AnimatedBackground()
+                AnimatedGradientBackground()
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     topBar
                     conversationArea
-                    floatingInputPanel
+                    inputPanel
                 }
                 
                 overlays
             }
             .preferredColorScheme(.dark)
-            .sheet(isPresented: $showingListingForm) {
-                ListingFormView()
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-            }
-            // This opens MyDrivewaysTab when "My Driveway" is tapped
             .fullScreenCover(isPresented: $chatViewModel.showMyDriveways) {
                 MyDrivewaysTab()
             }
         }
     }
     
-    // MARK: - Animated Background
-    struct AnimatedBackground: View {
+    // MARK: - Background (exact same as LoginView)
+    private struct AnimatedGradientBackground: View {
         var body: some View {
             DriveBayTheme.backgroundGradient
-                .animation(
-                    Animation.linear(duration: 30).repeatForever(autoreverses: true),
-                    value: UUID()
-                )
+                .animation(.linear(duration: 40).repeatForever(autoreverses: true), value: UUID())
         }
     }
     
     // MARK: - Top Bar
-    var topBar: some View {
+    private var topBar: some View {
         VStack(spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("DriveBay")
                         .font(.system(size: 30, weight: .black, design: .rounded))
-                        .foregroundStyle(
-                            LinearGradient(colors: [.white, DriveBayTheme.accent], startPoint: .leading, endPoint: .trailing)
-                        )
+                        .foregroundStyle(LinearGradient(colors: [.white, DriveBayTheme.accent], startPoint: .leading, endPoint: .trailing))
                     Text("Smart Parking • Driveways • Instant")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.white.opacity(0.7))
                 }
                 Spacer()
+                
                 Menu {
-                                // Menu Items (These remain the same)
-                                Button("My Bookings", systemImage: "list.bullet.clipboard") {
-                                    print("My Bookings tapped")
-                                }
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                
-//                                Button("My Driveway", systemImage: "house.fill") {
-//                                    print("My Driveway tapped")
-//                                }
-                            Button {
-                                chatViewModel.showMyDriveways = true
-                                } label: {
-                                    Label("My Driveway", systemImage: "house.fill")
-                                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                                }
-                                            
-                                Divider()
-                                
-                                Button("Logout", systemImage: "arrow.right.square") {
-                                    // TODO: Implement logout logic
-                                    onLogout()
-                                    print("Logout tapped")
-                                }
-                                
-                            } label: {
-                                // The visual icon (your existing car icon code)
-                                Image(systemName: "car.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.white)
-                                    .frame(width: 50, height: 50)
-                                    // Apply a slightly darker/more opaque background to make it stand out
-                                    .background(Circle().fill(DriveBayTheme.primary.opacity(0.6)))
-                                    .background(Circle().fill(DriveBayTheme.glow).blur(radius: 24))
-                                    .overlay(Circle().stroke(DriveBayTheme.glow, lineWidth: 2))
-                                    .shadow(color: .black.opacity(0.5), radius: 7, x: 0, y: 3) // Add a subtle shadow
-                            }
-                            // 💡 FIX: Apply a standard button style to the Menu label for press effect
-                            .buttonStyle(.plain)
-                            
-                        }
-                        .padding(.horizontal, 15)
+                    Button { chatViewModel.showMyDriveways = true } label: {
+                        Label("My Driveway", systemImage: "house.fill")
                     }
+                    Button { chatViewModel.showMyDriveways = true } label: {
+                        Label("My Bookings", systemImage: "list.bullet.clipboard")
+                    }
+                    Divider()
+                    Button("Logout", systemImage: "arrow.right.square") { onLogout() }
+                } label: {
+                    Image(systemName: "car.fill")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .frame(width: 50, height: 50)
+                        .background(Circle().fill(DriveBayTheme.primary.opacity(0.6)))
+                        .background(Circle().fill(DriveBayTheme.glow).blur(radius: 24))
+                        .overlay(Circle().stroke(DriveBayTheme.glow, lineWidth: 2))
+                        .shadow(color: .black.opacity(0.5), radius: 7)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 15)
+        }
         .padding(.top, 10)
         .padding(.bottom, 10)
         .background(.ultraThinMaterial)
     }
     
     // MARK: - Conversation Area
-    var conversationArea: some View {
+    private var conversationArea: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 20) {
+                LazyVStack(spacing: 16) {
                     if chatViewModel.messages.isEmpty {
                         WelcomeCard {
-                            Task {
-                                await chatViewModel.sendMessage("Show me all available driveways")
-                            }
+                            Task { await chatViewModel.sendMessage("Show me all available driveways") }
                         }
                         .padding(.top, 40)
                     }
                     
                     ForEach(chatViewModel.messages) { msg in
-                        MessageBubble(message: msg)
+                        MessageRow(message: msg)
                             .id(msg.id)
                     }
                     
                     if chatViewModel.isLoading {
-                        LoadingBubble()
+                        AILoadingRow()
                     }
                     
                     Color.clear.frame(height: 30).id(bottomID)
@@ -172,86 +131,108 @@ struct ChatView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
                 .onChange(of: chatViewModel.messages.count) { _ in
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                        proxy.scrollTo(bottomID, anchor: .bottom)
-                    }
+                    withAnimation { proxy.scrollTo(bottomID, anchor: .bottom) }
                 }
             }
         }
     }
     
-    // MARK: - Floating Input Panel
-    var floatingInputPanel: some View {
+    private struct MessageRow: View {
+        let message: ChatMessage
+        var isUser: Bool { message.role == .user }
+        
+        var body: some View {
+            HStack {
+                if isUser { Spacer(minLength: 60) }
+                
+                Text(message.content)
+                    .font(.system(size: 17, weight: .medium, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(18)
+                    .frame(maxWidth: UIScreen.main.bounds.width * 0.78, alignment: isUser ? .trailing : .leading)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(20)
+                    .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(DriveBayTheme.glassBorder.opacity(0.6)))
+                    .shadow(color: isUser ? DriveBayTheme.glow.opacity(0.4) : .black.opacity(0.2), radius: 12, y: 6)
+                
+                if !isUser { Spacer(minLength: 60) }
+            }
+        }
+    }
+    
+    private struct AILoadingRow: View {
+        var body: some View {
+            HStack(spacing: 10) {
+                ForEach(0..<3) { i in
+                    Circle()
+                        .fill(DriveBayTheme.accent)
+                        .frame(width: 9, height: 9)
+                        .scaleEffect(0.8 + 0.4 * CGFloat(sin(Double(i) * .pi / 1.5 + Date().timeIntervalSince1970)))
+                }
+            }
+            .padding(20)
+            .background(Color.white.opacity(0.08))
+            .cornerRadius(20)
+            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(DriveBayTheme.glow.opacity(0.4)))
+            .shadow(color: DriveBayTheme.glow.opacity(0.5), radius: 12, y: 6)
+        }
+    }
+    
+    // MARK: - Input Panel (exact same glass style as Login/SignUp)
+    private var inputPanel: some View {
         VStack(spacing: 16) {
             HStack(spacing: 12) {
-                GlassTextField(placeholder: "City", text: $city)
-                GlassTextField(placeholder: "State", text: $stateProvince)
+                GlassField(placeholder: "City", text: $city)
+                GlassField(placeholder: "State", text: $stateProvince)
             }
-            
             HStack(spacing: 12) {
-                GlassTextField(placeholder: "Zip Code", text: $zipCode)
-                GlassTextField(placeholder: "Country", text: $country)
+                GlassField(placeholder: "Zip Code", text: $zipCode)
+                GlassField(placeholder: "Country", text: $country)
             }
             
             HStack(spacing: 16) {
-                // "Near Me" Button
                 ActionButton(icon: "location.circle.fill", label: "Near Me", style: .outline) {
-                    chatViewModel.handleNearMeSearch()  // No parameters anymore
-                    
-                    // Show permission sheet if not granted
+                    chatViewModel.handleNearMeSearch()
                     if chatViewModel.permissionStatus != .granted {
-                        withAnimation(.spring()) {
-                            showPermissionModal = true
-                        }
+                        withAnimation { showPermissionModal = true }
                     }
                 }
                 
-                // "Find Parking" Button
                 ActionButton(icon: "sparkles", label: "Find Parking", style: .filled) {
                     let query = [city, stateProvince, zipCode, country]
                         .filter { !$0.isEmpty }
                         .joined(separator: ", ")
-                    
-                    if query.isEmpty {
-                        // Optional: show a little feedback
-                        return
-                    }
-                    
-                    Task {
-                        await chatViewModel.sendMessage("Find parking in \(query)")
-                    }
+                    guard !query.isEmpty else { return }
+                    Task { await chatViewModel.sendMessage("Find parking in \(query)") }
                 }
-                .shadow(color: DriveBayTheme.accent.opacity(0.5), radius: 12, y: 6)
+                .shadow(color: DriveBayTheme.glow.opacity(0.6), radius: 16, y: 8)
             }
         }
-        .padding(15)
-        .background(.ultraThinMaterial)
-        .background(DriveBayTheme.glass)
+        .padding(20)
+        .background(Color.white.opacity(0.08))
         .cornerRadius(24)
-        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(DriveBayTheme.glassBorder))
-        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(DriveBayTheme.glassBorder.opacity(0.6)))
+        .shadow(color: .black.opacity(0.4), radius: 30, y: 15)
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
-        .padding(.top, 10)
     }
     
-    // MARK: - Glass TextField
-    struct GlassTextField: View {
+    private struct GlassField: View {
         let placeholder: String
         @Binding var text: String
+        
         var body: some View {
             TextField("", text: $text, prompt: Text(placeholder).foregroundColor(.white.opacity(0.5)))
-                .padding(14)
-                .background(DriveBayTheme.glass)
+                .padding(18)
+                .background(Color.white.opacity(0.08))
                 .cornerRadius(16)
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(DriveBayTheme.glassBorder))
+                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(DriveBayTheme.glassBorder.opacity(0.6)))
                 .foregroundColor(.white)
-                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .font(.system(size: 16, weight: .medium, design: .rounded))
         }
     }
     
-    // MARK: - Action Button (Fixed!)
-    struct ActionButton: View {
+    private struct ActionButton: View {
         let icon: String
         let label: String
         let style: ButtonStyleType
@@ -261,31 +242,27 @@ struct ChatView: View {
             Button(action: action) {
                 Label(label, systemImage: icon)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .padding(.vertical,14)
+                    .padding(.vertical, 16)
                     .frame(maxWidth: style == .filled ? .infinity : nil)
-                    .padding(.horizontal,style == .filled ? 24 : 20)
-                    .background(style == .filled ? DriveBayTheme.accent.opacity(0.3) : DriveBayTheme.glass)
+                    .padding(.horizontal, style == .filled ? 28 : 22)
+                    .background(style == .filled ? DriveBayTheme.accent : Color.white.opacity(0.08))
                     .foregroundColor(.white)
-                    .cornerRadius(18)
+                    .cornerRadius(20)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(
-                                style == .filled ? DriveBayTheme.accent.opacity(0.6) : DriveBayTheme.glassBorder,
-                                lineWidth: style == .filled ? 1.5 : 1
-                            )
+                        RoundedRectangle(cornerRadius: 20)
+                            .strokeBorder(style == .filled ? DriveBayTheme.accent.opacity(0.6) : DriveBayTheme.glassBorder.opacity(0.6), lineWidth: 1.5)
                     )
             }
             .buttonStyle(ScaleButtonStyle())
         }
     }
     
-    // MARK: - Welcome Card
-    struct WelcomeCard: View {
+    private struct WelcomeCard: View {
         let onExplore: () -> Void
         var body: some View {
             VStack(spacing: 24) {
                 Image(systemName: "parkingsign.circle.fill")
-                    .font(.system(size: 50))
+                    .font(.system(size: 60))
                     .foregroundColor(DriveBayTheme.accent)
                     .shadow(color: DriveBayTheme.glow, radius: 20)
                 
@@ -293,145 +270,66 @@ struct ChatView: View {
                     Text("Welcome to DriveBay")
                         .font(.largeTitle.bold())
                         .foregroundColor(.white)
-                    
                     Text("Instant private parking, driveways,\nand real-time availability.")
                         .font(.title3)
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                 }
                 
-                Button("Explore Spots") {
-                    withAnimation { onExplore() }
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 16)
-                .background(DriveBayTheme.accent.opacity(0.3))
-                .cornerRadius(20)
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(DriveBayTheme.accent.opacity(0.6), lineWidth: 1.5))
-                .shadow(color: DriveBayTheme.accent.opacity(0.5), radius: 15)
+                Button("Explore Spots", action: onExplore)
+                    .font(.headline)
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 16)
+                    .background(DriveBayTheme.accent)
+                    .cornerRadius(20)
+                    .shadow(color: DriveBayTheme.glow, radius: 20)
             }
             .padding(32)
             .frame(maxWidth: 380)
-            .background(.ultraThinMaterial)
+            .background(Color.white.opacity(0.08))
             .cornerRadius(28)
             .overlay(RoundedRectangle(cornerRadius: 28).strokeBorder(DriveBayTheme.glassBorder))
             .shadow(color: .black.opacity(0.25), radius: 30, y: 15)
         }
     }
     
-    // MARK: - Message Bubble
-    struct MessageBubble: View {
-        let message: ChatMessage
-        var isUser: Bool { message.role == .user }
-        
-        var body: some View {
-            HStack {
-                if isUser { Spacer(minLength: 60) }
-                
-                Text(message.content)
-                    .padding(16)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(isUser ? DriveBayTheme.secondary.opacity(0.4) : DriveBayTheme.glass)
-                            .overlay(Capsule().stroke(DriveBayTheme.glassBorder, lineWidth: 1))
-                    )
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
-                    .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: isUser ? .trailing : .leading)
-                
-                if !isUser { Spacer(minLength: 60) }
-            }
-        }
-    }
-    
-    // MARK: - Loading Indicator
-    struct LoadingBubble: View {
-        var body: some View {
-            HStack(spacing: 8) {
-                ForEach(0..<3) { i in
-                    Circle()
-                        .fill(DriveBayTheme.accent)
-                        .frame(width: 8, height: 8)
-                        .scaleEffect(0.8 + 0.3 * sin(Double(i) * .pi / 1.5))
-                        .animation(.easeInOut(duration: 0.6).repeatForever().delay(Double(i) * 0.15), value: UUID())
-                }
-            }
-            .padding(16)
-            .background(.ultraThinMaterial)
-            .cornerRadius(20)
-        }
-    }
-    
-    // MARK: - Overlays
-    var overlays: some View {
+    private var overlays: some View {
         Group {
             if showPermissionModal {
                 LocationPermissionModal(isPresented: $showPermissionModal)
             }
-            if let listingName = listingToBook {
-                // Simple fallback modal (replace with your real one later)
-                ModalOverlay(title: "Booking: \(listingName)") {
-                    listingToBook = nil
-                }
-            }
         }
     }
 }
 
-// MARK: - Simple Modal (Replaces missing BookingConfirmationModal)
-struct ModalOverlay: View {
-    let title: String
-    let onClose: () -> Void
-    
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.6).ignoresSafeArea()
-            VStack(spacing: 20) {
-                Text(title)
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
-                
-                Button("Close") {
-                    onClose()
-                }
-                .padding()
-                .frame(width: 200)
-                .background(DriveBayTheme.accent.opacity(0.4))
-                .foregroundColor(.white)
-                .cornerRadius(16)
-            }
-            .padding(32)
-            .background(.ultraThinMaterial)
-            .cornerRadius(24)
-            .frame(width: 320)
-            .shadow(radius: 20)
-        }
+// Keep your existing supporting views (ScaleButtonStyle, LocationPermissionModal, etc.)
+// They are already perfect
+
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .animation(.spring(response: 0.3), value: configuration.isPressed)
     }
 }
 
-// MARK: - Location Permission Modal
 struct LocationPermissionModal: View {
     @Binding var isPresented: Bool
     
     var body: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
-            
             VStack(spacing: 24) {
                 Image(systemName: "location.slash.circle.fill")
                     .font(.system(size: 70))
                     .foregroundColor(.orange)
-                
                 Text("Location Access Required")
                     .font(.title2.bold())
                     .foregroundColor(.white)
-                
                 Text("DriveBay needs your location to find parking near you.")
                     .multilineTextAlignment(.center)
                     .foregroundColor(.white.opacity(0.8))
-                
                 Button("Open Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
@@ -444,7 +342,6 @@ struct LocationPermissionModal: View {
                 .background(Color.orange.opacity(0.8))
                 .cornerRadius(16)
                 .padding(.horizontal, 40)
-                
                 Button("Cancel") { isPresented = false }
                     .foregroundColor(.white.opacity(0.7))
             }
@@ -455,13 +352,3 @@ struct LocationPermissionModal: View {
         }
     }
 }
-
-// MARK: - Button Press Animation
-struct ScaleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
-            .animation(.spring(response: 0.3), value: configuration.isPressed)
-    }
-}
-

@@ -13,6 +13,7 @@
 		D77A44542ED92D980031C726 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = D77A44532ED92D980031C726 /* FirebaseFirestore */; };
 		D77A44562ED92FD80031C726 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = D77A44552ED92FD80031C726 /* FirebaseFirestore */; };
 		D77A44582ED92FD80031C726 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = D77A44572ED92FD80031C726 /* FirebaseFirestoreCombine-Community */; };
+		D7866DC92EDBD9F600E899E3 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = D7866DC82EDBD9F600E899E3 /* FirebaseAppCheck */; };
 		D7CDD11A2ED2982000F4F0FE /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = D7CDD1192ED2982000F4F0FE /* FirebaseAI */; };
 		D7CDD11C2ED2982000F4F0FE /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = D7CDD11B2ED2982000F4F0FE /* FirebaseAILogic */; };
 		D7CDD11E2ED2982000F4F0FE /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = D7CDD11D2ED2982000F4F0FE /* FirebaseAnalytics */; };
@@ -116,6 +117,7 @@
 				D7DAC3A72ED35E3C00905E69 /* FirebaseAppCheck in Frameworks */,
 				D7D3F8DD2ED2A1B800C63381 /* FirebasePerformance in Frameworks */,
 				D7DAC3A92ED35E3C00905E69 /* FirebaseAppDistribution-Beta in Frameworks */,
+				D7866DC92EDBD9F600E899E3 /* FirebaseAppCheck in Frameworks */,
 				D7D3F8C32ED2A1B800C63381 /* FirebaseAuth in Frameworks */,
 				D77A44562ED92FD80031C726 /* FirebaseFirestore in Frameworks */,
 				D7D3F8D12ED2A1B800C63381 /* FirebaseFunctions in Frameworks */,
@@ -561,6 +563,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D7CDD1182ED2982000F4F0FE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseFirestoreCombine-Community";
+		};
+		D7866DC82EDBD9F600E899E3 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D7CDD1182ED2982000F4F0FE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
 		};
 		D7CDD1192ED2982000F4F0FE /* FirebaseAI */ = {
 			isa = XCSwiftPackageProductDependency;
