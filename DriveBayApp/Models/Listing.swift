@@ -18,6 +18,9 @@ struct Listing: Identifiable, Codable {
     var endTime: String
     var contactEmail: String
     var createdAt: Timestamp?
+    let latitude: Double?
+    let longitude: Double?
+    let isActive: Bool
 
     // This init lets you skip 'id' — it auto-generates
     init(
@@ -34,7 +37,10 @@ struct Listing: Identifiable, Codable {
         startTime: String,
         endTime: String,
         contactEmail: String,
-        createdAt: Timestamp? = nil
+        createdAt: Timestamp? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        isActive: Bool = true
     ) {
         self.id = id
         self.ownerId = ownerId
@@ -50,6 +56,9 @@ struct Listing: Identifiable, Codable {
         self.endTime = endTime
         self.contactEmail = contactEmail
         self.createdAt = createdAt
+        self.latitude = latitude
+        self.longitude = longitude
+        self.isActive = isActive
     }
 
     var identifiableID: String { id }

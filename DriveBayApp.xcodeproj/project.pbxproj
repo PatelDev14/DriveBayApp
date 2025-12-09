@@ -84,7 +84,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D76E5BA82ED2296D00318A79 /* DriveBayApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DriveBayApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D70137692EE3BDD7007DABC5 /* DriveBayApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DriveBayApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -197,16 +197,8 @@
 			isa = PBXGroup;
 			children = (
 				D76E5BAA2ED2296D00318A79 /* DriveBayApp */,
-				D76E5BA92ED2296D00318A79 /* Products */,
+				D70137692EE3BDD7007DABC5 /* DriveBayApp.app */,
 			);
-			sourceTree = "<group>";
-		};
-		D76E5BA92ED2296D00318A79 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				D76E5BA82ED2296D00318A79 /* DriveBayApp.app */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -229,7 +221,7 @@
 			);
 			name = DriveBayApp;
 			productName = DriveBayApp;
-			productReference = D76E5BA82ED2296D00318A79 /* DriveBayApp.app */;
+			productReference = D70137692EE3BDD7007DABC5 /* DriveBayApp.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -262,7 +254,7 @@
 				D77A444C2ED923360031C726 /* XCRemoteSwiftPackageReference "generative-ai-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = D76E5BA92ED2296D00318A79 /* Products */;
+			productRefGroup = D76E5B9F2ED2296D00318A79;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (

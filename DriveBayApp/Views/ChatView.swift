@@ -21,7 +21,8 @@ struct DriveBayTheme {
 enum ButtonStyleType { case filled, outline }
 
 struct ChatView: View {
-    @ObservedObject var chatViewModel: ChatViewModel
+    //@ObservedObject var chatViewModel: ChatViewModel
+    @StateObject private var chatViewModel = ChatViewModel()
     
     @State private var city: String = ""
     @State private var stateProvince: String = ""
@@ -29,6 +30,13 @@ struct ChatView: View {
     @State private var country: String = ""
     
     @State private var showPermissionModal = false
+    
+    @State private var selectedProfileTab: ProfileTab = .driveways
+
+    private enum ProfileTab {
+        case driveways
+        case bookings
+    }
     
     var onLogout: () -> Void
     
@@ -50,7 +58,11 @@ struct ChatView: View {
             }
             .preferredColorScheme(.dark)
             .fullScreenCover(isPresented: $chatViewModel.showMyDriveways) {
-                MyDrivewaysTab()
+                if selectedProfileTab == .driveways {
+                    MyDrivewaysTab()
+                } else {
+                    MyBookingsTab() 
+                }
             }
         }
     }
@@ -76,12 +88,17 @@ struct ChatView: View {
                         .foregroundColor(.white.opacity(0.7))
                 }
                 Spacer()
-                
                 Menu {
-                    Button { chatViewModel.showMyDriveways = true } label: {
+                    Button {
+                        selectedProfileTab = .driveways
+                        chatViewModel.showMyDriveways = true
+                    } label: {
                         Label("My Driveway", systemImage: "house.fill")
                     }
-                    Button { chatViewModel.showMyDriveways = true } label: {
+                    Button {
+                        selectedProfileTab = .bookings
+                        chatViewModel.showMyDriveways = true
+                    } label: {
                         Label("My Bookings", systemImage: "list.bullet.clipboard")
                     }
                     Divider()
@@ -321,33 +338,43 @@ struct LocationPermissionModal: View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
             VStack(spacing: 24) {
-                Image(systemName: "location.slash.circle.fill")
+                Image(systemName: "location.circle.fill")
                     .font(.system(size: 70))
-                    .foregroundColor(.orange)
-                Text("Location Access Required")
+                    .foregroundColor(DriveBayTheme.accent)
+                    .shadow(color: DriveBayTheme.glow, radius: 20)
+                
+                Text("Enable Location Access")
                     .font(.title2.bold())
                     .foregroundColor(.white)
-                Text("DriveBay needs your location to find parking near you.")
+                
+                Text("DriveBay needs your location to find parking spots near you. Choose 'Allow While Using App' or 'Always' in Settings.")
                     .multilineTextAlignment(.center)
                     .foregroundColor(.white.opacity(0.8))
+                    .padding(.horizontal, 20)
+                
                 Button("Open Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
+                    isPresented = false  // Close modal after opening Settings
                 }
                 .font(.headline)
                 .foregroundColor(.white)
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(Color.orange.opacity(0.8))
+                .background(DriveBayTheme.accent.opacity(0.8))
                 .cornerRadius(16)
+                .shadow(color: DriveBayTheme.glow, radius: 12)
                 .padding(.horizontal, 40)
+                
                 Button("Cancel") { isPresented = false }
                     .foregroundColor(.white.opacity(0.7))
             }
             .padding(32)
-            .background(.ultraThinMaterial)
+            .background(Color.white.opacity(0.08))
             .cornerRadius(24)
+            .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(DriveBayTheme.glassBorder.opacity(0.6)))
+            .shadow(color: .black.opacity(0.4), radius: 30, y: 15)
             .frame(width: 340)
         }
     }

@@ -38,9 +38,7 @@ private let placeholderListings: [Listing] = [
 @main
 struct DriveBayAppApp: App {
     @StateObject private var authService = AuthService()
-    
-    // Initialize ChatViewModel once here, passing static data and a static handler
-    @StateObject private var chatViewModel: ChatViewModel
+    @StateObject private var chatViewModel = ChatViewModel()
 
     init() {
         // 1. Configure Firebase services immediately
@@ -53,17 +51,10 @@ struct DriveBayAppApp: App {
         // 2. Define the static booking handler for the ViewModel
         let bookingHandler: (Listing, Date, Date) async throws -> Void = { listing, start, end in
             print("Booking requested for \(listing.address) from \(start) to \(end)")
-            // ⭐️ PLACEHOLDER: Integrate your real BookingService call here ⭐️
-            // try await BookingService.submitBooking(listing, start, end)
         }
         
         // 3. Initialize the StateObject wrapper with the configured ViewModel
-        _chatViewModel = StateObject(
-            wrappedValue: ChatViewModel(
-                marketplaceListings: placeholderListings, // Pass the static data
-                requestBooking: bookingHandler             // Pass the handler closure
-            )
-        )
+        _chatViewModel = StateObject(wrappedValue: ChatViewModel())
     }
 
     var body: some Scene {
@@ -71,7 +62,7 @@ struct DriveBayAppApp: App {
             // Use the authentication state to switch between views
             if authService.isLoggedIn {
                 ChatView(
-                    chatViewModel: chatViewModel,
+                    //chatViewModel: chatViewModel,
                     // Sign-out logic handles the async call safely
                     onLogout: {
                         Task {
