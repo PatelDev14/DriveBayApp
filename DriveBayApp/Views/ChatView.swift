@@ -1,7 +1,7 @@
 import SwiftUI
 import CoreLocation
 
-// MARK: - DriveBay Theme (copy-paste this if you don’t have it in a separate file yet)
+// MARK: - DriveBay Theme
 struct DriveBayTheme {
     static let primary   = Color(red: 0.07, green: 0.18, blue: 0.36)
     static let secondary = Color(red: 0.28, green: 0.45, blue: 0.76)
@@ -122,11 +122,11 @@ struct ChatView: View {
         .background(.ultraThinMaterial)
     }
     
-    // MARK: - Conversation Area
+    // MARK: - Conversation Area – FINAL LUXURY VERSION
     private var conversationArea: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 16) {
+                LazyVStack(spacing: 20) {
                     if chatViewModel.messages.isEmpty {
                         WelcomeCard {
                             Task { await chatViewModel.sendMessage("Show me all available driveways") }
@@ -143,55 +143,69 @@ struct ChatView: View {
                         AILoadingRow()
                     }
                     
-                    Color.clear.frame(height: 30).id(bottomID)
+                    Color.clear.frame(height: 40).id(bottomID)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
                 .onChange(of: chatViewModel.messages.count) { _ in
-                    withAnimation { proxy.scrollTo(bottomID, anchor: .bottom) }
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        proxy.scrollTo(bottomID, anchor: .bottom)
+                    }
                 }
             }
         }
     }
-    
+
+    // MARK: - Glass Message Row – EXACT SAME STYLE AS EVERYWHERE ELSE
     private struct MessageRow: View {
         let message: ChatMessage
         var isUser: Bool { message.role == .user }
         
         var body: some View {
             HStack {
-                if isUser { Spacer(minLength: 60) }
+                if isUser { Spacer(minLength: 70) }
                 
                 Text(message.content)
                     .font(.system(size: 17, weight: .medium, design: .rounded))
                     .foregroundColor(.white)
                     .padding(18)
                     .frame(maxWidth: UIScreen.main.bounds.width * 0.78, alignment: isUser ? .trailing : .leading)
-                    .background(Color.white.opacity(0.08))
-                    .cornerRadius(20)
-                    .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(DriveBayTheme.glassBorder.opacity(0.6)))
-                    .shadow(color: isUser ? DriveBayTheme.glow.opacity(0.4) : .black.opacity(0.2), radius: 12, y: 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(isUser ? DriveBayTheme.accent.opacity(0.25) : DriveBayTheme.glass)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    .strokeBorder(DriveBayTheme.glassBorder.opacity(isUser ? 0.4 : 0.3), lineWidth: 1.2)
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .strokeBorder(DriveBayTheme.glow.opacity(isUser ? 0.6 : 0.3), lineWidth: isUser ? 2 : 0)
+                    )
+                    .shadow(color: isUser ? DriveBayTheme.glow.opacity(0.5) : .black.opacity(0.2), radius: 12, y: 6)
                 
-                if !isUser { Spacer(minLength: 60) }
+                if !isUser { Spacer(minLength: 70) }
             }
+            .padding(.vertical, 4)
         }
     }
-    
+
+    // MARK: - AI Loading Row – GLOWING & PREMIUM
     private struct AILoadingRow: View {
         var body: some View {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 ForEach(0..<3) { i in
                     Circle()
                         .fill(DriveBayTheme.accent)
-                        .frame(width: 9, height: 9)
+                        .frame(width: 10, height: 10)
                         .scaleEffect(0.8 + 0.4 * CGFloat(sin(Double(i) * .pi / 1.5 + Date().timeIntervalSince1970)))
+                        .animation(.easeInOut(duration: 0.6).repeatForever().delay(Double(i) * 0.15), value: UUID())
                 }
             }
             .padding(20)
-            .background(Color.white.opacity(0.08))
-            .cornerRadius(20)
-            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(DriveBayTheme.glow.opacity(0.4)))
-            .shadow(color: DriveBayTheme.glow.opacity(0.5), radius: 12, y: 6)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(DriveBayTheme.glow.opacity(0.4)))
+            .shadow(color: DriveBayTheme.glow.opacity(0.6), radius: 16, y: 8)
         }
     }
     
