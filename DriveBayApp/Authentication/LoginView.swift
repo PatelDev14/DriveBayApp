@@ -1,4 +1,3 @@
-// Authentication/LoginView.swift
 import SwiftUI
 
 struct LoginView: View {
@@ -16,7 +15,6 @@ struct LoginView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // DriveBay signature background — same as ChatView & MyDriveways
                 AnimatedGradientBackground()
                     .ignoresSafeArea()
 
@@ -203,7 +201,6 @@ struct LoginView: View {
             
             do {
                 try await authService.signIn(email: email, password: password)
-                // Success → AuthService updates isLoggedIn → App switches to ChatView automatically
             } catch {
                 print("Login failed: \(error.localizedDescription)")
                 errorMessage = error.localizedDescription
@@ -241,10 +238,4 @@ struct LoginView: View {
         }
     }
     
-}
-
-#Preview {
-    // You need to provide the environment object for the preview to work
-    LoginView()
-        .environmentObject(AuthService())
 }

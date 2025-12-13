@@ -21,6 +21,8 @@ struct Listing: Identifiable, Codable {
     let latitude: Double?
     let longitude: Double?
     let isActive: Bool
+    
+    var distanceFromUser: Double? = nil
 
     // This init lets you skip 'id' — it auto-generates
     init(
@@ -94,5 +96,23 @@ struct GlassCard<Content: View>: View {
             .background(Color.white.opacity(0.15))
             .cornerRadius(12)
             .shadow(radius: 5)
+    }
+}
+
+enum MessageRole { case user, model, system }
+enum PermissionState: String { case prompt, granted, denied }
+
+struct ChatMessage: Identifiable {
+    let id = UUID()
+    let role: MessageRole
+    let content: String
+    let listings: [Listing]?
+    let timestamp: Date
+    
+    init(role: MessageRole, content: String = "", listings: [Listing]? = nil, timestamp: Date) {
+        self.role = role
+        self.content = content
+        self.listings = listings
+        self.timestamp = timestamp
     }
 }

@@ -7,7 +7,6 @@ actor MapKitManager {
     
     private let db = Firestore.firestore()
     
-    /// Returns only active listings within maxDistanceKm of the user, sorted closest first
     func fetchNearbyListings(
         from userLocation: CLLocation,
         maxDistanceKm: Double = 10.0
@@ -20,11 +19,18 @@ actor MapKitManager {
             .limit(to: 300)
             .getDocuments()
         
-        var listings = snapshot.documents.compactMap { try? $0.data(as: Listing.self) }
+        // Use 'var' to allow mutation inside the closure
+        var listings: [Listing] = snapshot.documents.compactMap { doc in
+            guard var listing = try? doc.data(as: Listing.self) else { return nil }
+            // Manually assign ID from document (essential if not using FirestoreSwift)
+            listing.id = doc.documentID
+            return listing
+        }
         
         // 2. Calculate distance for each valid listing
         var results: [Listing] = []
         
+        // Use 'enumerated()' to mutate the array directly, or just iterate and append the mutable copy.
         for var listing in listings {
             guard let lat = listing.latitude,
                   let lng = listing.longitude else { continue }
@@ -32,7 +38,8 @@ actor MapKitManager {
             let listingLocation = CLLocation(latitude: lat, longitude: lng)
             let distanceKm = userLocation.distance(from: listingLocation) / 1000.0
             
-            // THIS LINE WAS MISSING! → Now we actually save the distance
+            // Save the distance
+            // NOTE: This requires 'distanceFromUser' to be a standard 'var' in your Listing struct.
             listing.distanceFromUser = distanceKm
             results.append(listing)
         }
@@ -42,25 +49,4 @@ actor MapKitManager {
             .filter { ($0.distanceFromUser ?? 999) <= maxDistanceKm }
             .sorted { ($0.distanceFromUser ?? 999) < ($1.distanceFromUser ?? 999) }
     }
-}
-
-// MARK: - Safe Distance Storage (works without changing your Listing model)
-extension Listing {
-    var distanceFromUser: Double {
-        get {
-            objc_getAssociatedObject(self, &AssociatedKeys.distanceKey) as? Double ?? 999
-        }
-        set {
-            objc_setAssociatedObject(self, &AssociatedKeys.distanceKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-    }
-    
-    var coordinate: CLLocationCoordinate2D? {
-        guard let lat = latitude, let lng = longitude else { return nil }
-        return CLLocationCoordinate2D(latitude: lat, longitude: lng)
-    }
-}
-
-private struct AssociatedKeys {
-    static var distanceKey = "distanceFromUserKey"
 }

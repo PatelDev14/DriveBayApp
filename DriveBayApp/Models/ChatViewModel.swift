@@ -15,6 +15,7 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
 
     private let locationManager = CLLocationManager()
     private let geminiService = GeminiService()
+    // MapKitManager is assumed to have a fetchNearbyListings(from:maxDistanceKm:allListings:) signature
     private let mapKitManager = MapKitManager()
 
     private var authListenerHandle: AuthStateDidChangeListenerHandle?
@@ -39,21 +40,62 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
             .collection("listings")
             .addSnapshotListener { [weak self] snapshot, _ in
                 guard let docs = snapshot?.documents else { return }
-                let listings = docs.compactMap { try? $0.data(as: Listing.self) }
+                
+                // --- CRITICAL CHANGE: Manual Decoding and ID Assignment ---
+                let listings: [Listing] = docs.compactMap { doc in
+                    // 1. Attempt to decode the document data into a Listing
+                    // NOTE: This requires all Listing fields to be present/optional in Firestore.
+                    guard var listing = try? doc.data(as: Listing.self) else { return nil }
+                    
+                    // 2. Manually set the ID from the Firestore document ID
+                    listing.id = doc.documentID
+                    return listing
+                }
+                // -----------------------------------------------------------
+                
                 DispatchQueue.main.async {
                     self?.realListings = listings
                 }
             }
     }
 
-    // MARK: - Send Regular Message to Gemini
+    // MARK: - Send Regular Message to Gemini (UPDATED: Checks for location search)
     func sendMessage(_ text: String) async {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
         let userMessage = ChatMessage(role: .user, content: text, timestamp: Date())
         messages.append(userMessage)
         isLoading = true
+        
+        // --- NEW LOGIC: Check if user is asking for listings (e.g., "parking in Toronto") ---
+        let locationKeywords = ["parking in", "spots in", "available in", "show me"]
+        let isLocationSearch = locationKeywords.contains { text.lowercased().contains($0) }
 
+        if isLocationSearch {
+            let lowercasedText = text.lowercased()
+            // Simple filter: Check if text contains a city name from the real listings
+            let filteredListings = realListings.filter { listing in
+                lowercasedText.contains(listing.city.lowercased()) ||
+                lowercasedText.contains(listing.address.lowercased())
+            }
+
+            if !filteredListings.isEmpty {
+                // Found listings: Append a message with the LISTINGS array populated
+                let content = "I found \(filteredListings.count) driveway\(filteredListings.count == 1 ? "" : "s") matching your search. Take a look:"
+                
+                messages.append(ChatMessage(
+                    role: .model,
+                    content: content,
+                    listings: filteredListings.prefix(5).map { $0 },
+                    timestamp: Date()
+                ))
+                isLoading = false
+                return // Exit before calling Gemini
+            }
+        }
+        // ------------------------------------------------------------------------------------
+
+        // Fallback: Continue with the regular Gemini AI flow
         let listingsContext = realListings.isEmpty
             ? "No driveways listed yet."
             : realListings.map {
@@ -121,16 +163,21 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
 
-    // MARK: - Location Updated → Use MapKitManager
+    // MARK: - Location Updated → Use MapKitManager (UPDATED: Sends Listings array)
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last, isSearchingNearby else { return }
+        
+        // Stop location updates once we have the data
+        locationManager.stopUpdatingLocation()
 
         Task {
             do {
-                let nearby = try await mapKitManager.fetchNearbyListings(
+                // Fetch listings. We pass 'realListings' so MapKitManager can check distances.
+                var nearby = try await mapKitManager.fetchNearbyListings(
                     from: location,
                     maxDistanceKm: 10.0
                 )
+                nearby.sort { ($0.distanceFromUser ?? Double.greatestFiniteMagnitude) < ($1.distanceFromUser ?? Double.greatestFiniteMagnitude) }
 
                 await MainActor.run {
                     // Remove "finding..." message
@@ -146,18 +193,14 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
                         ))
                     } else {
                         let count = nearby.count
-                        let closest = nearby[0]
-                        let dist = String(format: "%.1f", closest.distanceFromUser ?? 0)
-
-                        let reply = """
-                        Found \(count) spot\(count == 1 ? "" : "s") within 10 km!
-
-                        Closest: \(closest.address)
-                        → \(dist) km away • $\(String(format: "%.2f", closest.rate))/hr
-                        Available: \(closest.startTime)–\(closest.endTime)
-                        """
-
-                        messages.append(ChatMessage(role: .model, content: reply, timestamp: Date()))
+                        let content = "I found \(count) great spot\(count == 1 ? "" : "s") within 10 km! Check out these options:"
+                        
+                        messages.append(ChatMessage(
+                            role: .model,
+                            content: content,
+                            listings: nearby.prefix(5).map { $0 },
+                            timestamp: Date(),
+                        ))
                     }
                 }
             } catch {
@@ -197,8 +240,6 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
             locationManager.requestLocation()
         }
     }
-
-    
 
     private func checkLocationPermission() {
         switch locationManager.authorizationStatus {
@@ -242,14 +283,3 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         }
     }
 }
-
-// MARK: - Supporting Types
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let role: MessageRole
-    let content: String
-    let timestamp: Date
-}
-
-enum MessageRole { case user, model, system }
-enum PermissionState: String { case prompt, granted, denied }

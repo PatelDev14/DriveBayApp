@@ -292,8 +292,3 @@ struct ListingFormView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        ListingFormView()
-    }
-}

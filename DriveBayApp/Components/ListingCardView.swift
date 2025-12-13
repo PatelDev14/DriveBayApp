@@ -1,159 +1,83 @@
-//
-//  ListingCardView.swift
-//  DriveBayApp
-//
-//  Created by Dev Patel on 2025-12-10.
-//
-
-// Views/ListingCardView.swift
 import SwiftUI
-
 struct ListingCardView: View {
     let listing: Listing
     let isLoggedIn: Bool
     let onBook: () -> Void
     
+    // Use a compact style for displaying within a list/carousel
     var body: some View {
-        VStack(spacing: 0) {
-            // MAIN CARD — LUXURY GLASS
-            VStack(alignment: .leading, spacing: 16) {
-                // Header: Location
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(DriveBayTheme.accent.opacity(0.15))
-                        .frame(width: 48, height: 48)
-                        .overlay(
-                            Image(systemName: "location.fill")
-                                .font(.title3)
-                                .foregroundStyle(DriveBayTheme.accent)
-                        )
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Parking Spot")
-                            .font(.title3.bold())
-                            .foregroundColor(.white)
-                        
-                        Text("\(listing.address), \(listing.city), \(listing.state)")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
-                            .lineLimit(1)
-                    }
-                }
-                .padding(.bottom, 8)
-                
-                Divider().background(Color.white.opacity(0.1))
-                
-                // Description (if exists)
-                if let desc = listing.description, !desc.isEmpty {
-                    Text(desc)
-                        .font(.body)
-                        .foregroundColor(.white.opacity(0.85))
-                        .italic()
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(12)
-                        .overlay(
-                            Rectangle()
-                                .frame(width: 4)
-                                .foregroundStyle(DriveBayTheme.accent)
-                        )
-                        .padding(.horizontal, -4)
-                }
-                
-                // Key Details
-                VStack(spacing: 14) {
-                    // RATE — HIGHLIGHTED LIKE REACT
-                    HStack {
-                        Image(systemName: "dollarsign.circle.fill")
-                            .foregroundStyle(.green)
-                            .font(.title2)
-                        
-                        Text("Hourly Rate")
-                            .font(.headline)
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Spacer()
-                        
-                        Text("$\(String(format: "%.2f", listing.rate))")
-                            .font(.title2.bold())
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.green, .mint],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                        Text("/hr")
-                            .font(.body)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    .padding(12)
-                    .background(Color.green.opacity(0.15))
-                    .cornerRadius(16)
-                    
-                    // Date
-                    HStack(spacing: 12) {
-                        Image(systemName: "calendar")
-                            .foregroundStyle(.cyan)
-                        Text("Date:")
-                            .font(.headline)
-                            .foregroundColor(.white.opacity(0.9))
-                        Spacer()
-                        Text(listing.formattedDate)
-                            .font(.headline)
-                            .foregroundColor(.white)
-                    }
-                    
-                    // Time
-                    HStack(spacing: 12) {
-                        Image(systemName: "clock.fill")
-                            .foregroundStyle(.purple)
-                        Text("Available:")
-                            .font(.headline)
-                            .foregroundColor(.white.opacity(0.9))
-                        Spacer()
-                        Text("\(listing.startTime) – \(listing.endTime)")
-                            .font(.headline)
-                            .foregroundStyle(DriveBayTheme.accent)
-                    }
-                }
-                .padding(.top, 8)
-            }
-            .padding(24)
-            .background(Color.white.opacity(0.08))
-            .cornerRadius(24)
-            .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(DriveBayTheme.glassBorder.opacity(0.6)))
-            .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-            .padding(.horizontal)
+        VStack(alignment: .leading, spacing: 12) {
             
-            // GRADIENT BOOK BUTTON — EXACTLY LIKE REACT
-            Button {
-                onBook()
-            } label: {
-                Text(isLoggedIn ? "Request to Book" : "Log In to Book")
-                    .font(.title3.bold())
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 60)
-                    .background(
-                        LinearGradient(
-                            colors: [DriveBayTheme.accent, Color.indigo],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(20)
-                    .shadow(color: DriveBayTheme.glow, radius: 20, y: 10)
-                    .scaleEffect(isLoggedIn ? 1.0 : 0.95)
-                    .opacity(isLoggedIn ? 1.0 : 0.6)
+            // 1. HEADER & DISTANCE
+            HStack(spacing: 12) {
+                Image(systemName: "car.side.fill")
+                    .font(.title2)
+                    .foregroundStyle(DriveBayTheme.accent)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(listing.address)
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    Text("\(listing.city), \(listing.state) • \(formattedDistance)")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                // Rate Tag (Prominent)
+                Text("$\(String(format: "%.2f", listing.rate))/hr")
+                    .font(.subheadline.bold())
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(Color.green.opacity(0.2))
+                    .cornerRadius(8)
             }
-            .disabled(!isLoggedIn)
-            .padding(.horizontal, 24)
-            .padding(.top, 12)
-            .padding(.bottom, 20)
+            
+            Divider().background(Color.white.opacity(0.1))
+            
+            // 2. TIME & DESCRIPTION
+            HStack {
+                Image(systemName: "clock.fill")
+                    .foregroundStyle(.purple)
+                
+                Text("\(listing.startTime) – \(listing.endTime)")
+                    .font(.subheadline)
+                    .foregroundColor(DriveBayTheme.accent)
+                
+                Spacer()
+                
+                // BOOK BUTTON (Simplified to an icon/text link)
+                Button {
+                    onBook()
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(isLoggedIn ? "Book" : "Log In")
+                        Image(systemName: "arrow.forward.circle.fill")
+                    }
+                    .font(.subheadline.bold())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(isLoggedIn ? DriveBayTheme.accent : Color.gray)
+                    .foregroundColor(.black)
+                    .cornerRadius(8)
+                }
+                .disabled(!isLoggedIn)
+                
+            }
         }
-        .background(Color.clear)
-        .padding(.vertical, 8)
+        .padding(16)
+        // Lighter background, no huge shadow or excessive padding
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.1)))
+    }
+    
+    private var formattedDistance: String {
+        guard let dist = listing.distanceFromUser else { return "Distance unknown" }
+        return String(format: "%.1f km away", dist)
     }
 }
