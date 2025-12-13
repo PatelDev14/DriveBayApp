@@ -226,7 +226,3 @@ struct MyDrivewaysTab: View {
             }
     }
 }
-
-#Preview {
-    MyDrivewaysTab()
-}

@@ -19,7 +19,6 @@ struct DriveBayTheme {
     static let glassBorder = Color.white.opacity(0.15)
 }
 extension View {
-    /// Applies a corner radius selectively to certain corners using UIRectCorner
     func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
         clipShape(RoundedCorner(radius: radius, corners: corners))
     }
@@ -30,7 +29,6 @@ struct RoundedCorner: Shape {
     var corners: UIRectCorner = .allCorners
 
     func path(in rect: CGRect) -> Path {
-        // UIRectCorner types are now available because you have 'import UIKit'
         let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
         return Path(path.cgPath)
     }
@@ -257,35 +255,12 @@ struct ChatView: View {
 
                         // --- B. RENDER LISTING CARDS (For "Near Me" results) ---
                         if let listings = message.listings, !listings.isEmpty {
-                            
-                            // Use a VStack for stacking the cards vertically
-                            VStack(spacing: 12) { // Reduced space between stacked cards
-                                ForEach(listings) { listing in
-                                    // The new ListingCardView is assumed to be smaller and cleaner now
-                                    ListingCardView(
-                                        listing: listing,
-                                        isLoggedIn: isLoggedIn,
-                                        onBook: {
-                                            // TODO: Implement navigation to the full booking screen
-                                            if isLoggedIn {
-                                                print("Navigate to booking for \(listing.address)")
+                            ListingCarouselView(listings: listings, isLoggedIn: isLoggedIn) { listing in
+                                                // This is the same action that was inside the old onBook closure
+                                                if isLoggedIn {
+                                                    print("Navigate to booking for \(listing.address)")
+                                                }
                                             }
-                                        }
-                                    )
-                                }
-                            }
-                            // This visual grouping is the key to making the stacked cards look clean
-                            .padding(12)
-                            .background(
-                                Color.black.opacity(0.2)
-                                    .cornerRadius(16) // Apply rounding to the grouping container
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                            )
-                            // This forces the listing block to align left for Model responses
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                     .frame(maxWidth: UIScreen.main.bounds.width * 0.8, alignment: isUser ? .trailing : .leading)
@@ -346,8 +321,8 @@ struct ChatView: View {
                     path.move(to: CGPoint(x: 0, y: 0))
                     
                     let corners: UIRectCorner = isUser
-                        ? [.topLeft, .topRight, .bottomLeft] // Sharp bottom right for User
-                        : [.topLeft, .topRight, .bottomRight] // Sharp bottom left for AI
+                        ? [.topLeft, .topRight, .bottomLeft]
+                        : [.topLeft, .topRight, .bottomRight]
                     
                     let pathRef = UIBezierPath(
                         roundedRect: rect,
