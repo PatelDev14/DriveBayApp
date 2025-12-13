@@ -15,7 +15,6 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
 
     private let locationManager = CLLocationManager()
     private let geminiService = GeminiService()
-    // MapKitManager is assumed to have a fetchNearbyListings(from:maxDistanceKm:allListings:) signature
     private let mapKitManager = MapKitManager()
 
     private var authListenerHandle: AuthStateDidChangeListenerHandle?
@@ -67,39 +66,11 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         messages.append(userMessage)
         isLoading = true
         
-        // --- NEW LOGIC: Check if user is asking for listings (e.g., "parking in Toronto") ---
-        let locationKeywords = ["parking in", "spots in", "available in", "show me"]
-        let isLocationSearch = locationKeywords.contains { text.lowercased().contains($0) }
-
-        if isLocationSearch {
-            let lowercasedText = text.lowercased()
-            // Simple filter: Check if text contains a city name from the real listings
-            let filteredListings = realListings.filter { listing in
-                lowercasedText.contains(listing.city.lowercased()) ||
-                lowercasedText.contains(listing.address.lowercased())
-            }
-
-            if !filteredListings.isEmpty {
-                // Found listings: Append a message with the LISTINGS array populated
-                let content = "I found \(filteredListings.count) driveway\(filteredListings.count == 1 ? "" : "s") matching your search. Take a look:"
-                
-                messages.append(ChatMessage(
-                    role: .model,
-                    content: content,
-                    listings: filteredListings.prefix(5).map { $0 },
-                    timestamp: Date()
-                ))
-                isLoading = false
-                return // Exit before calling Gemini
-            }
-        }
-        // ------------------------------------------------------------------------------------
-
-        // Fallback: Continue with the regular Gemini AI flow
+        // --- 1. Prepare Gemini Prompt ---
         let listingsContext = realListings.isEmpty
             ? "No driveways listed yet."
             : realListings.map {
-                "• \($0.address), \($0.city) \($0.state) — $\(String(format: "%.2f", $0.rate))/hr — \($0.startTime)–\($0.endTime)"
+                "• \($0.address), \($0.city) \($0.state) — $\(String(format: "%.2f", $0.rate))/hr"
             }.joined(separator: "\n")
 
         let fullPrompt = """
@@ -110,25 +81,99 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
 
         User asked: "\(text)"
 
-        Respond naturally and helpfully. Only recommend from real listings.
-        If nothing matches, say: "No spots match right now — try broadening your search!"
-        Keep replies short and warm.
+        INSTRUCTION: 
+        1. If the user is asking for parking spots, respond with a friendly message and include the special token at the END: [ATTACH_LISTINGS_FOR:[Location Name]]
+        2. The token MUST NOT be visible to the user.
+        3. If nothing matches, or if it's a general question, just respond normally.
+        4. Keep replies short and warm.
         """
+
+        // --- 2. Call Gemini and Process Response ---
+        var cleanedResponse: String = ""
+        var listingsToAttach: [Listing]? = nil
+        let tokenPattern = "\\[ATTACH_LISTINGS_FOR:(.*?)\\]"
 
         do {
             let response = try await geminiService.generateResponse(prompt: fullPrompt)
-            let botMessage = ChatMessage(role: .model, content: response, timestamp: Date())
-            messages.append(botMessage)
+            cleanedResponse = response.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // --- 3. Token Check and Filtering (Priority 1) ---
+            if let range = response.range(of: tokenPattern, options: .regularExpression) {
+                let token = String(response[range])
+                
+                // Extract the location from the token
+                if let locRange = token.range(of: "(?<=\\[ATTACH_LISTINGS_FOR:).*?(?=\\])", options: .regularExpression),
+                   let locationQuery = String(token[locRange]).lowercased().components(separatedBy: CharacterSet.punctuationCharacters).first {
+                    
+                    // • EXPANDED FILTER: Include City, State, Address, and Country
+                    listingsToAttach = realListings.filter { listing in
+                        let lowercasedListingInfo = "\(listing.address) \(listing.city) \(listing.state) \(listing.country)".lowercased()
+                        return lowercasedListingInfo.contains(locationQuery)
+                    }.prefix(5).map { $0 }
+                }
+                
+                // Remove the token from the response
+                cleanedResponse = response.replacingOccurrences(of: tokenPattern, with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            
         } catch {
+            cleanedResponse = "Sorry, I'm having trouble connecting right now."
+            // We skip all filtering if the network call fails
+        }
+
+        // --- 4. Local Keyword Fallback (Priority 2: Only if Token failed or yielded zero) ---
+        // • Add a local keyword-based fallback filter
+        if (listingsToAttach == nil || listingsToAttach!.isEmpty) && cleanedResponse != "Sorry, I'm having trouble connecting right now." {
+            
+            let locationKeywords = ["parking in", "spots in", "available in", "show me", "in "]
+            let lowercasedText = text.lowercased()
+            
+            // Use the original simple keyword check for a quick fallback
+            let isLocationSearch = locationKeywords.contains { lowercasedText.contains($0) }
+            
+            if isLocationSearch {
+                 // Use a broader filter to catch more results
+                listingsToAttach = realListings.filter { listing in
+                    let lowercasedListingInfo = "\(listing.address) \(listing.city) \(listing.state) \(listing.country)".lowercased()
+                    return lowercasedListingInfo.contains(lowercasedText)
+                }.prefix(5).map { $0 }
+            }
+        }
+
+        // --- 5. Final Message Construction (Ensuring Cards Render) ---
+        let finalContent: String
+        
+        // Check if we have listings to attach
+        if let attachedListings = listingsToAttach, !attachedListings.isEmpty {
+            
+            let count = attachedListings.count
+            
+            // • IMPROVED FALLBACK: Ensure content exists if Gemini's response was empty after token removal
+            if cleanedResponse.isEmpty {
+                finalContent = "I found \(count) spot\(count == 1 ? "" : "s") for you:"
+            } else {
+                finalContent = cleanedResponse // Use Gemini's custom text
+            }
+
+            // Append message WITH listings
             messages.append(ChatMessage(
-                role: .system,
-                content: "Sorry, I'm having trouble connecting right now.",
+                role: .model,
+                content: finalContent,
+                listings: attachedListings,
+                timestamp: Date()
+            ))
+        } else {
+            // Append message WITHOUT listings (text-only path)
+            messages.append(ChatMessage(
+                role: .model,
+                content: cleanedResponse,
+                listings: nil,
                 timestamp: Date()
             ))
         }
+
         isLoading = false
     }
-
     // MARK: - NEAR ME BUTTON — Perfect Flow
     func handleNearMeSearch() {
         guard !isSearchingNearby else { return }
@@ -175,7 +220,7 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
                 // Fetch listings. We pass 'realListings' so MapKitManager can check distances.
                 var nearby = try await mapKitManager.fetchNearbyListings(
                     from: location,
-                    maxDistanceKm: 10.0
+//                    maxDistanceKm: 10.0
                 )
                 nearby.sort { ($0.distanceFromUser ?? Double.greatestFiniteMagnitude) < ($1.distanceFromUser ?? Double.greatestFiniteMagnitude) }
 
@@ -194,6 +239,7 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
                     } else {
                         let count = nearby.count
                         let content = "I found \(count) great spot\(count == 1 ? "" : "s") within 10 km! Check out these options:"
+                        //let content = ""
                         
                         messages.append(ChatMessage(
                             role: .model,
