@@ -126,8 +126,3 @@ struct PasswordResetView: View {
         }
     }
 }
-
-#Preview {
-    PasswordResetView()
-        .environmentObject(AuthService())
-}
