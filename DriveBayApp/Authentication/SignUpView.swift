@@ -172,8 +172,3 @@ struct SignUpView: View {
         }
     }
 }
-
-#Preview {
-    SignUpView()
-        .environmentObject(AuthService())
-}

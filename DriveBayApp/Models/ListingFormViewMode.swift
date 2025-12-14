@@ -3,6 +3,7 @@ import FirebaseFirestore
 import FirebaseAuth
 import Combine
 import CoreLocation
+//import Resend
 
 class ListingFormViewModel: ObservableObject {
     
@@ -21,6 +22,8 @@ class ListingFormViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var validationError: String?
     @Published var locationError: String?
+    
+    let emailService = EmailService()
 
     @Published var rate = "" {
         didSet {
@@ -107,14 +110,24 @@ class ListingFormViewModel: ObservableObject {
                 } else {
                     try await saveToFirebase(rate: rateValue)
                 }
+                
+                // ← ADD EMAIL SEND HERE (after save succeeds)
+                let recipient = contactEmail.isEmpty ? (Auth.auth().currentUser?.email ?? "") : contactEmail
+                let fullAddress = "\(address), \(city), \(state) \(zipCode)"
+                
+                try await emailService.sendDrivewayPostedEmail(
+                    to: recipient,
+                    address: fullAddress,
+                    rate: rateValue
+                )
                 onSuccess?()
             } catch {
-                validationError = "Failed to save: \(error.localizedDescription)"
+                validationError = "Driveway saved, but email failed: \(error.localizedDescription)"
+                onSuccess?()
             }
-            isLoading = false
         }
     }
-
+    
     // MARK: - Save New Listing WITH REAL LAT/LNG
     private func saveToFirebase(rate: Double) async throws {
         guard let user = Auth.auth().currentUser else {
