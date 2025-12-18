@@ -46,6 +46,9 @@ struct ChatView: View {
     @State private var country: String = ""
     
     @State private var showPermissionModal = false
+    @State private var showingProfile = false
+    @State private var showingProfileSheet = false
+    @StateObject private var profileViewModel = ProfileViewModel()
     
     @State private var selectedProfileTab: ProfileTab = .driveways
 
@@ -80,6 +83,9 @@ struct ChatView: View {
                     MyBookingsTab() 
                 }
             }
+        }
+        .sheet(isPresented: $showingProfile) {
+            ProfileView(onLogout: onLogout)
         }
     }
     
@@ -132,6 +138,11 @@ struct ChatView: View {
                         } label: {
                             Label("My Bookings", systemImage: "list.bullet.clipboard")
                         }
+                        Button {
+                                showingProfile = true  // Add @State private var showingProfile = false
+                            } label: {
+                                Label("Profile", systemImage: "person.circle.fill")
+                            }
                         Divider()
                         Button("Logout", systemImage: "arrow.right.square") { onLogout() }
                     } label: {
