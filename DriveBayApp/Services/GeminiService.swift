@@ -3,8 +3,8 @@ import Foundation
 actor GeminiService {
     
     private let apiKey: String
-    // Using gemini-2.5-flash since you used that model in the TypeScript
     private let modelName = "gemini-2.5-flash"
+
     
     private lazy var url: URL = {
         // Construct the URL using the model name

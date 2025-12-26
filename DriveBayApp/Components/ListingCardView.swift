@@ -1,5 +1,7 @@
 import SwiftUI
 struct ListingCardView: View {
+    @State private var selectedListing: Listing? = nil
+    
     let listing: Listing
     let isLoggedIn: Bool
     let onBook: () -> Void
@@ -50,9 +52,11 @@ struct ListingCardView: View {
                 
                 Spacer()
                 
-                // BOOK BUTTON (Simplified to an icon/text link)
                 Button {
                     onBook()
+                    if isLoggedIn {
+                            selectedListing = listing
+                        }
                 } label: {
                     HStack(spacing: 4) {
                         Text(isLoggedIn ? "Book" : "Log In")
@@ -68,6 +72,9 @@ struct ListingCardView: View {
                 .disabled(!isLoggedIn)
                 
             }
+//            .sheet(item: $selectedListing) { listing in
+//                BookingRequestView(listing: listing)
+//            }
         }
         .padding(16)
         // Lighter background, no huge shadow or excessive padding

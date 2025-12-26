@@ -14,8 +14,10 @@
             filePath = "DriveBayApp/Models/ListingFormViewMode.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "209"
-            endingLineNumber = "209">
+            startingLineNumber = "219"
+            endingLineNumber = "219"
+            landmarkName = "ListingFormViewModel"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
