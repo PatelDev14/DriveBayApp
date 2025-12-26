@@ -98,9 +98,19 @@ class ListingFormViewModel: ObservableObject {
             return
         }
         
-        if startTime.isEmpty || startTime.count != 5 { startTime = "09:00" }
-        if endTime.isEmpty || endTime.count != 5 { endTime = "17:00" }
-        
+//        if startTime.isEmpty || startTime.count != 5 { startTime = "09:00" }
+//        if endTime.isEmpty || endTime.count != 5 { endTime = "17:00" }
+//
+        let normalizedStart = normalizeTime(startTime)
+        let normalizedEnd = normalizeTime(endTime)
+
+        if normalizedStart.isEmpty || normalizedEnd.isEmpty {
+            validationError = "Please enter valid times (e.g., 09:00 or 9:00)"
+            return
+        }
+
+        startTime = normalizedStart
+        endTime = normalizedEnd
         isLoading = true
         
         Task { @MainActor in
@@ -200,13 +210,7 @@ class ListingFormViewModel: ObservableObject {
 
     // MARK: - Helpers
     private func validateTime(_ time: String) -> Bool {
-        let components = time.split(separator: ":")
-        guard components.count == 2,
-              let hours = Int(components[0]), hours >= 0 && hours <= 23,
-              let minutes = Int(components[1]), minutes >= 0 && minutes <= 59 else {
-            return false
-        }
-        return true
+        return !normalizeTime(time).isEmpty
     }
     
     private func timeToMinutes(_ time: String) -> Int {
@@ -217,5 +221,18 @@ class ListingFormViewModel: ObservableObject {
             return -1
         }
         return hours * 60 + minutes
+    }
+    
+    private func normalizeTime(_ time: String) -> String {
+        let cleaned = time.trimmingCharacters(in: .whitespaces)
+        let parts = cleaned.split(separator: ":")
+        
+        guard parts.count == 2,
+              let hours = Int(parts[0]), hours >= 0 && hours <= 23,
+              let minutes = Int(parts[1]), minutes >= 0 && minutes <= 59 else {
+            return ""
+        }
+        
+        return String(format: "%02d:%02d", hours, minutes)
     }
 }

@@ -10,6 +10,7 @@ struct MyDrivewaysTab: View {
     @State private var showingEditForm = false
     @State private var listingToDelete: Listing?
     @State private var showingDeleteAlert = false
+    @State private var showingRequests = false
 
     var body: some View {
         NavigationStack {
@@ -59,6 +60,14 @@ struct MyDrivewaysTab: View {
                     .id(selectedListing?.id ?? "new")
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
+            }
+            // Right below the .sheet for ListingFormView
+            .sheet(isPresented: $showingRequests) {
+                if let listing = selectedListing {
+                    RequestsView(listing: listing)
+                        .presentationDetents([.medium, .large])
+                        .presentationDragIndicator(.visible)
+                }
             }
             .alert("Delete Driveway?", isPresented: $showingDeleteAlert) {
                 Button("Cancel", role: .cancel) { }
@@ -128,7 +137,7 @@ struct MyDrivewaysTab: View {
                             .foregroundColor(DriveBayTheme.accent)
                             .shadow(color: DriveBayTheme.glow, radius: 10)
 
-                        // DELETE BUTTON — GORGEOUS & DANGEROUS
+                        // DELETE BUTTON
                         Button {
                             listingToDelete = listing
                             showingDeleteAlert = true
@@ -138,6 +147,7 @@ struct MyDrivewaysTab: View {
                                 .foregroundColor(.red)
                                 .shadow(color: .red.opacity(0.6), radius: 12)
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
 

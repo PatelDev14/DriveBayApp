@@ -49,12 +49,34 @@ struct ChatView: View {
     @State private var showingProfile = false
     @State private var showingProfileSheet = false
     @StateObject private var profileViewModel = ProfileViewModel()
+
     
     @State private var selectedProfileTab: ProfileTab = .driveways
+    @State private var listingToBook: Listing? = nil
+    @State private var activeSheet: SheetType?
+
+    private enum SheetType: Identifiable {
+        case booking(Listing)
+        case profile
+        case myDriveways
+        case myBookings
+        case requests
+        
+        var id: String {
+            switch self {
+            case .booking(let l): return "booking-\(l.id ?? "unknown")"
+            case .profile: return "profile"
+            case .myDriveways: return "driveways"
+            case .myBookings: return "bookings"
+            case .requests: return "requests"
+            }
+        }
+    }
 
     private enum ProfileTab {
         case driveways
         case bookings
+        case requests
     }
     
     var onLogout: () -> Void
@@ -76,18 +98,31 @@ struct ChatView: View {
                 overlays
             }
             .preferredColorScheme(.dark)
+            // 1. Keep the Full Screen Cover inside the NavigationStack
             .fullScreenCover(isPresented: $chatViewModel.showMyDriveways) {
-                if selectedProfileTab == .driveways {
-                    MyDrivewaysTab()
-                } else {
-                    MyBookingsTab() 
+                        switch selectedProfileTab {
+                        case .driveways:
+                            MyDrivewaysTab()
+                        case .bookings:
+                            MyBookingsTab()
+//                        case .requests:
+//                            RequestsView(listing: nil)
+                        case .requests:
+                            RequestsView(listing: Optional<Listing>.none)
+                        }
+                    }
+                    
+                    // Booking request sheet
+                    .sheet(item: $listingToBook) { listing in
+                        BookingRequestView(listing: listing)
+                    }
+                    
+                    // Profile sheet
+                    .sheet(isPresented: $showingProfile) {
+                        ProfileView(onLogout: onLogout)
+                    }
                 }
             }
-        }
-        .sheet(isPresented: $showingProfile) {
-            ProfileView(onLogout: onLogout)
-        }
-    }
     
     // MARK: - Background (exact same as LoginView)
     private struct AnimatedGradientBackground: View {
@@ -138,6 +173,12 @@ struct ChatView: View {
                         } label: {
                             Label("My Bookings", systemImage: "list.bullet.clipboard")
                         }
+                        Button {
+                                selectedProfileTab = .requests // Ensure your Enum has a .requests case
+                                chatViewModel.showMyDriveways = true
+                            } label: {
+                                Label("Incoming Requests", systemImage: "bell.fill")
+                            }
                         Button {
                                 showingProfile = true  // Add @State private var showingProfile = false
                             } label: {
@@ -210,9 +251,10 @@ struct ChatView: View {
                         }
                         
                         ForEach(chatViewModel.messages) { msg in
-                            MessageRow(message: msg)
-                                .id(msg.id)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                            MessageRowView(message: msg, isLoggedIn: true) { selectedListing in
+                                self.listingToBook = selectedListing
+                            }
+                            .id(msg.id)
                         }
                         
                         if chatViewModel.isLoading {
@@ -421,7 +463,7 @@ struct ChatView: View {
             )
             .shadow(color: .black.opacity(0.25), radius: 25, y: 10)
             .padding(.horizontal, 16)
-            .padding(.bottom, 4) // 3. Pushed much closer to the bottom edge
+            .padding(.bottom, 4)
         }
         
         // MARK: - Slim Glass Field
@@ -648,3 +690,5 @@ struct LocationPermissionModal: View {
         }
     }
 }
+
+   
