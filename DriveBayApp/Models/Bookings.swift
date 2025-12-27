@@ -6,11 +6,13 @@ import SwiftUI
 struct Booking: Identifiable, Codable {
     @DocumentID var id: String?  
     let listingId: String
-    let listingAddress: String         // For quick display without joining
+    let listingAddress: String
     let listingOwnerId: String
     let renterId: String
     let renterEmail: String
-    let status: BookingStatus          // ← Now uses the enum properly
+    let ownerEmail: String?
+    let totalPrice: Double?
+    let status: BookingStatus
     
     let requestedDate: Date
     let startTime: String
@@ -49,6 +51,8 @@ struct Booking: Identifiable, Codable {
         listingOwnerId: String,
         renterId: String,
         renterEmail: String,
+        ownerEmail: String? = nil, 
+        totalPrice: Double? = 0.0,
         status: BookingStatus = .pending,
         requestedDate: Date = Date(),
         startTime: String,
@@ -61,6 +65,8 @@ struct Booking: Identifiable, Codable {
         self.listingOwnerId = listingOwnerId
         self.renterId = renterId
         self.renterEmail = renterEmail
+        self.ownerEmail = ownerEmail
+        self.totalPrice = totalPrice
         self.status = status
         self.requestedDate = requestedDate
         self.startTime = startTime

@@ -8,6 +8,8 @@ struct RequestsView: View {
     let listing: Listing?  // Optional: filter by specific listing, or nil for all
     @State private var requests: [Booking] = []
     @State private var isUpdating = false
+    @State private var requestToDelete: Booking?
+    @State private var showingDeleteAlert = false
     
     private let emailService = EmailService()
     
@@ -24,8 +26,7 @@ struct RequestsView: View {
                             Text("Renter: \(request.renterEmail)")
                                 .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.8))
-                        }
-                        
+                        }                        
                         Spacer()
                         
                         StatusBadge(status: request.status)
@@ -34,6 +35,16 @@ struct RequestsView: View {
                     HStack {
                         Label(request.requestedDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
                             .foregroundColor(.cyan)
+                        
+                        Button {
+                                    requestToDelete = request
+                                    showingDeleteAlert = true
+                                } label: {
+                                    Image(systemName: "trash.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.red.opacity(0.8))
+                                }
+                                .buttonStyle(.plain) // Prevents the whole list row from being tapped
                         
                         Spacer()
                         
@@ -86,6 +97,14 @@ struct RequestsView: View {
             }
             .onAppear {
                 fetchRequests()
+            }
+            .alert("Delete Request?", isPresented: $showingDeleteAlert, presenting: requestToDelete) { request in
+                Button("Delete", role: .destructive) {
+                    deleteRequest(request)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: { request in
+                Text("Are you sure you want to delete the request from \(request.renterEmail)? This action cannot be undone.")
             }
         }
         .preferredColorScheme(.dark)
@@ -157,6 +176,19 @@ struct RequestsView: View {
                         print("Email send failed: \(error)")
                     }
                 }
+            }
+        }
+    }
+    
+    private func deleteRequest(_ request: Booking) {
+        guard let id = request.id else { return }
+        
+        Firestore.firestore().collection("bookings").document(id).delete { error in
+            if let error = error {
+                print("Error deleting request: \(error.localizedDescription)")
+            } else {
+                print("Request successfully deleted")
+                // The SnapshotListener will automatically update the UI
             }
         }
     }
