@@ -2,17 +2,16 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 import Combine
-import CoreLocation
-//import Resend
+import MapKit
 
-class ListingFormViewModel: ObservableObject {
+final class ListingFormViewModel: ObservableObject {
     
     // MARK: - Published Properties
     @Published var address = ""
     @Published var city = ""
     @Published var state = ""
     @Published var zipCode = ""
-    @Published var country = "USA"
+    @Published var country = ""
     @Published var description = ""
     @Published var date = Date()
     @Published var startTime = ""
@@ -21,10 +20,9 @@ class ListingFormViewModel: ObservableObject {
     
     @Published var isLoading = false
     @Published var validationError: String?
-    @Published var locationError: String?
     
     let emailService = EmailService()
-
+    
     @Published var rate = "" {
         didSet {
             let filtered = rate.filter { "0123456789.".contains($0) }
@@ -39,47 +37,39 @@ class ListingFormViewModel: ObservableObject {
                 if value < 0.01 { rate = "0.01" }
                 if value > 999.99 { rate = "999.99" }
             }
-
             if rate.isEmpty || rate == "." { rate = "0.00" }
         }
     }
     
+    // MARK: - Callbacks
     var onSuccess: (() -> Void)?
     private var editingListingID: String?
 
-    // MARK: - Location Manager
-    private let locationManager = CLLocationManager()
-
-    // MARK: - Init (CORRECT — no override, no super)
-    init() {
-        // Request location permission
-        locationManager.requestWhenInUseAuthorization()
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-    }
+    // MARK: - Init
+    init() {}
 
     // MARK: - Load Existing Listing
     func loadListing(_ listing: Listing) {
-        self.address = listing.address
-        self.city = listing.city
-        self.state = listing.state
-        self.zipCode = listing.zipCode
-        self.country = listing.country
-        self.description = listing.description ?? ""
-        self.rate = String(format: "%.2f", listing.rate)
-        self.startTime = listing.startTime
-        self.endTime = listing.endTime
-        self.contactEmail = listing.contactEmail
-        self.editingListingID = listing.id
+        address = listing.address
+        city = listing.city
+        state = listing.state
+        zipCode = listing.zipCode
+        country = listing.country
+        description = listing.description ?? ""
+        rate = String(format: "%.2f", listing.rate)
+        startTime = listing.startTime
+        endTime = listing.endTime
+        contactEmail = listing.contactEmail
+        editingListingID = listing.id
     }
 
     // MARK: - Submit
     func submit() {
         validationError = nil
-        locationError = nil
         
-        guard !address.isEmpty, !city.isEmpty, !state.isEmpty, !zipCode.isEmpty,
-              !rate.isEmpty, !startTime.isEmpty, !endTime.isEmpty else {
-            validationError = "Please fill out all required fields."
+        // 1. Basic Validation
+        guard !address.isEmpty, !city.isEmpty, !state.isEmpty, !zipCode.isEmpty, !country.isEmpty else {
+            validationError = "Please fill out all address fields."
             return
         }
         
@@ -87,78 +77,82 @@ class ListingFormViewModel: ObservableObject {
             validationError = "Rate must be a positive number."
             return
         }
-        
-        guard validateTime(startTime) && validateTime(endTime) else {
-            validationError = "Please enter times in valid HH:MM format (e.g., 09:00)."
-            return
-        }
-        
-        guard timeToMinutes(startTime) < timeToMinutes(endTime) else {
-            validationError = "End time must be after start time."
-            return
-        }
-        
-//        if startTime.isEmpty || startTime.count != 5 { startTime = "09:00" }
-//        if endTime.isEmpty || endTime.count != 5 { endTime = "17:00" }
-//
+
         let normalizedStart = normalizeTime(startTime)
         let normalizedEnd = normalizeTime(endTime)
 
-        if normalizedStart.isEmpty || normalizedEnd.isEmpty {
-            validationError = "Please enter valid times (e.g., 09:00 or 9:00)"
+        guard !normalizedStart.isEmpty, !normalizedEnd.isEmpty else {
+            validationError = "Please enter valid times (e.g., 09:00)."
+            return
+        }
+
+        guard timeToMinutes(normalizedStart) < timeToMinutes(normalizedEnd) else {
+            validationError = "End time must be after start time."
             return
         }
 
         startTime = normalizedStart
         endTime = normalizedEnd
         isLoading = true
-        
+
         Task { @MainActor in
             do {
+                // 2. Geocode & Save
                 if let id = editingListingID {
                     try await updateListingInFirebase(id: id, rate: rateValue)
                 } else {
                     try await saveToFirebase(rate: rateValue)
                 }
                 
-                // ← ADD EMAIL SEND HERE (after save succeeds)
+                // 3. Send Email Notification
                 let recipient = contactEmail.isEmpty ? (Auth.auth().currentUser?.email ?? "") : contactEmail
-                let fullAddress = "\(address), \(city), \(state) \(zipCode)"
+                let displayAddress = "\(address), \(city)"
                 
-                try await emailService.sendDrivewayPostedEmail(
+                // We use a try? here so if email fails, the user still sees their driveway was saved
+                try? await emailService.sendDrivewayPostedEmail(
                     to: recipient,
-                    address: fullAddress,
+                    address: displayAddress,
                     rate: rateValue
                 )
+                
                 onSuccess?()
             } catch {
-                validationError = "Driveway saved, but email failed: \(error.localizedDescription)"
-                onSuccess?()
+                validationError = error.localizedDescription
             }
+            isLoading = false
         }
     }
-    
-    // MARK: - Save New Listing WITH REAL LAT/LNG
+
+    // MARK: - Modern Geocoding Logic
+    /// Converts the text address into Latitude and Longitude using MapKit
+    private func getCoordinates() async throws -> CLLocationCoordinate2D {
+        let fullAddress = "\(address), \(city), \(state), \(zipCode), \(country)"
+        
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = fullAddress
+        request.resultTypes = .address
+        
+        let search = MKLocalSearch(request: request)
+        let response = try await search.start()
+        
+        guard let coordinate = response.mapItems.first?.placemark.coordinate else {
+            throw NSError(domain: "GeocodeError", code: 0,
+                          userInfo: [NSLocalizedDescriptionKey: "Could not verify this address location."])
+        }
+        
+        return coordinate
+    }
+
+    // MARK: - Firebase Operations
     private func saveToFirebase(rate: Double) async throws {
         guard let user = Auth.auth().currentUser else {
-            throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "You must be logged in"])
+            throw NSError(domain: "AuthError", code: 0,
+                          userInfo: [NSLocalizedDescriptionKey: "You must be logged in"])
         }
-        
-        let db = Firestore.firestore()
-        let ref = db.collection("listings").document()
-        
-        // Real location or fallback to Toronto
-        var latitude: Double = 43.6532   // Toronto
-        var longitude: Double = -79.3832
-        
-        if let location = locationManager.location {
-            latitude = location.coordinate.latitude
-            longitude = location.coordinate.longitude
-            print("Saved real location: \(latitude), \(longitude)")
-        } else {
-            print("Location denied — using Toronto fallback")
-        }
-        
+
+        let coords = try await getCoordinates()
+        let ref = Firestore.firestore().collection("listings").document()
+
         let listing = Listing(
             id: ref.documentID,
             ownerId: user.uid,
@@ -172,22 +166,20 @@ class ListingFormViewModel: ObservableObject {
             date: date,
             startTime: startTime,
             endTime: endTime,
-            contactEmail: contactEmail.isEmpty ? user.email ?? "" : contactEmail,
+            contactEmail: contactEmail.isEmpty ? (user.email ?? "") : contactEmail,
             createdAt: Timestamp(),
-            latitude: latitude,
-            longitude: longitude,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
             isActive: true
         )
-        
+
         try ref.setData(from: listing)
     }
 
-    // MARK: - Update Existing
     private func updateListingInFirebase(id: String, rate: Double) async throws {
-        let db = Firestore.firestore()
-        let ref = db.collection("listings").document(id)
-        
-        var updateData: [String: Any] = [
+        let coords = try await getCoordinates()
+
+        let updateData: [String: Any] = [
             "address": address,
             "city": city,
             "state": state,
@@ -197,42 +189,31 @@ class ListingFormViewModel: ObservableObject {
             "rate": rate,
             "startTime": startTime,
             "endTime": endTime,
-            "contactEmail": contactEmail
+            "contactEmail": contactEmail,
+            "latitude": coords.latitude,
+            "longitude": coords.longitude
         ]
-        
-        if let location = locationManager.location {
-            updateData["latitude"] = location.coordinate.latitude
-            updateData["longitude"] = location.coordinate.longitude
-        }
-        
-        try await ref.updateData(updateData)
+
+        try await Firestore.firestore()
+            .collection("listings")
+            .document(id)
+            .updateData(updateData)
     }
 
     // MARK: - Helpers
-    private func validateTime(_ time: String) -> Bool {
-        return !normalizeTime(time).isEmpty
-    }
-    
-    private func timeToMinutes(_ time: String) -> Int {
-        let components = time.split(separator: ":")
-        guard components.count == 2,
-              let hours = Int(components[0]),
-              let minutes = Int(components[1]) else {
-            return -1
-        }
-        return hours * 60 + minutes
-    }
-    
     private func normalizeTime(_ time: String) -> String {
-        let cleaned = time.trimmingCharacters(in: .whitespaces)
-        let parts = cleaned.split(separator: ":")
-        
+        let parts = time.trimmingCharacters(in: .whitespaces).split(separator: ":")
         guard parts.count == 2,
-              let hours = Int(parts[0]), hours >= 0 && hours <= 23,
-              let minutes = Int(parts[1]), minutes >= 0 && minutes <= 59 else {
+              let h = Int(parts[0]), h >= 0 && h <= 23,
+              let m = Int(parts[1]), m >= 0 && m <= 59 else {
             return ""
         }
-        
-        return String(format: "%02d:%02d", hours, minutes)
+        return String(format: "%02d:%02d", h, m)
+    }
+
+    private func timeToMinutes(_ time: String) -> Int {
+        let parts = time.split(separator: ":")
+        guard parts.count == 2 else { return 0 }
+        return (Int(parts[0]) ?? 0) * 60 + (Int(parts[1]) ?? 0)
     }
 }

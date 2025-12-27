@@ -5,34 +5,34 @@ import FirebaseAppCheck
 
 // Real placeholder listings (auto ID thanks to your Listing init in DataModels.swift)
 private let placeholderListings: [Listing] = [
-    Listing(
-        ownerId: "dummy1",
-        address: "123 Ocean Drive",
-        city: "Miami",
-        state: "FL",
-        zipCode: "33139",
-        country: "USA",
-        description: "Prime beachfront parking",
-        rate: 8.0,
-        date: Date(), // Must provide a Date for the struct to compile
-        startTime: "09:00",
-        endTime: "18:00",
-        contactEmail: "miami@example.com"
-    ),
-    Listing(
-        ownerId: "dummy2",
-        address: "456 Palm Avenue",
-        city: "Los Angeles",
-        state: "CA",
-        zipCode: "90210",
-        country: "USA",
-        description: "Downtown spot",
-        rate: 12.0,
-        date: Date(), // Must provide a Date for the struct to compile
-        startTime: "08:00",
-        endTime: "20:00",
-        contactEmail: "la@example.com"
-    )
+//    Listing(
+//        ownerId: "dummy1",
+//        address: "123 Ocean Drive",
+//        city: "Miami",
+//        state: "FL",
+//        zipCode: "33139",
+//        country: "USA",
+//        description: "Prime beachfront parking",
+//        rate: 8.0,
+//        date: Date(), // Must provide a Date for the struct to compile
+//        startTime: "09:00",
+//        endTime: "18:00",
+//        contactEmail: "miami@example.com"
+//    ),
+//    Listing(
+//        ownerId: "dummy2",
+//        address: "456 Palm Avenue",
+//        city: "Los Angeles",
+//        state: "CA",
+//        zipCode: "90210",
+//        country: "USA",
+//        description: "Downtown spot",
+//        rate: 12.0,
+//        date: Date(), // Must provide a Date for the struct to compile
+//        startTime: "08:00",
+//        endTime: "20:00",
+//        contactEmail: "la@example.com"
+//    )
 ]
 
 @main
