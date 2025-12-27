@@ -1,19 +1,14 @@
-//
-//  DrivewaysSearchViewModel.swift
-//  DriveBayApp
-//
-//  Created by Dev Patel on 2025-12-26.
-//
-
 import Foundation
 import Combine
 import FirebaseFirestore
+import MapKit
 
 class DrivewaysSearchViewModel: ObservableObject {
     @Published var city = ""
     @Published var state = ""
     @Published var country = ""
     @Published var zipCode = ""
+    @Published var address: String = ""
     
     @Published var listings: [Listing] = []
     @Published var isLoading = false
@@ -21,9 +16,9 @@ class DrivewaysSearchViewModel: ObservableObject {
     @Published var didSearch = false
     
     func searchDriveways() {
-        // At least one field must be filled
+        // Validation
         guard !(city.isEmpty && state.isEmpty && country.isEmpty && zipCode.isEmpty) else {
-            errorMessage = "Please enter at least one search field."
+            errorMessage = "Please enter a location to search."
             return
         }
         
@@ -32,27 +27,33 @@ class DrivewaysSearchViewModel: ObservableObject {
         didSearch = true
         
         let db = Firestore.firestore()
-        var query: Query = db.collection("listings")
-            .whereField("isActive", isEqualTo: true)
+        var query: Query = db.collection("listings").whereField("isActive", isEqualTo: true)
         
+        // FIX: Remove forced Uppercasing/Capitalization that causes case-mismatch with DB
         if !city.isEmpty {
-            query = query.whereField("city", isEqualTo: city.trimmingCharacters(in: .whitespaces).capitalized)
+            let cleanedCity = city.trimmingCharacters(in: .whitespaces)
+            query = query.whereField("city", isEqualTo: cleanedCity)
         }
+        
         if !state.isEmpty {
-            query = query.whereField("state", isEqualTo: state.trimmingCharacters(in: .whitespaces).uppercased())
+            let cleanedState = state.trimmingCharacters(in: .whitespaces)
+            query = query.whereField("state", isEqualTo: cleanedState)
         }
+        
         if !country.isEmpty {
-            query = query.whereField("country", isEqualTo: country.trimmingCharacters(in: .whitespaces).uppercased())
+            let cleanedCountry = country.trimmingCharacters(in: .whitespaces)
+            query = query.whereField("country", isEqualTo: cleanedCountry)
         }
+        
         if !zipCode.isEmpty {
             query = query.whereField("zipCode", isEqualTo: zipCode.trimmingCharacters(in: .whitespaces))
         }
         
         Task {
             do {
+                // NOTE: Firestore requires an INDEX for queries with multiple 'where' + 'order'
+                // If this crashes or fails, check your Xcode console for a link to create the index.
                 let snapshot = try await query
-                    .order(by: "createdAt", descending: true)
-                    .limit(to: 50)
                     .getDocuments()
                 
                 let results = snapshot.documents.compactMap { document in
@@ -62,16 +63,14 @@ class DrivewaysSearchViewModel: ObservableObject {
                 await MainActor.run {
                     self.listings = results
                     self.isLoading = false
-                    
                     if results.isEmpty {
-                        self.errorMessage = "No driveways found in that area."
+                        self.errorMessage = "No driveways found in \(city)."
                     }
                 }
             } catch {
                 await MainActor.run {
-                    self.errorMessage = "Search failed. Try again."
+                    self.errorMessage = "Search error: \(error.localizedDescription)"
                     self.isLoading = false
-                    print("Search error: \(error)")
                 }
             }
         }

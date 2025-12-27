@@ -83,7 +83,7 @@ struct ChatView: View {
                 VStack(spacing: 0) {
                     topBar
                     conversationArea
-                    inputPanel
+                    //inputPanel
                 }
                 
                 overlays
@@ -231,45 +231,6 @@ struct ChatView: View {
             }
             .scrollIndicators(.hidden)
         }
-    }
-    
-    // MARK: - Input Panel
-    private var inputPanel: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 10) {
-                GlassField(placeholder: "City", icon: "building.2.fill", text: $city)
-                GlassField(placeholder: "State", icon: "map.fill", text: $stateProvince)
-            }
-            HStack(spacing: 10) {
-                GlassField(placeholder: "Zip Code", icon: "envelope.fill", text: $zipCode)
-                GlassField(placeholder: "Country", icon: "globe", text: $country)
-            }
-            HStack(spacing: 12) {
-                ActionButton(icon: "location.circle.fill", label: "Near Me", style: .outline) {
-                    chatViewModel.handleNearMeSearch()
-                    if chatViewModel.permissionStatus != .granted {
-                        withAnimation { showPermissionModal = true }
-                    }
-                }
-                ActionButton(icon: "sparkles", label: "Find Parking", style: .filled) {
-                    let query = [city, stateProvince, zipCode, country].filter { !$0.isEmpty }.joined(separator: ", ")
-                    guard !query.isEmpty else { return }
-                    Task { await chatViewModel.sendMessage("Find parking in \(query)") }
-                }
-            }
-        }
-        .padding(16)
-        .background {
-            ZStack {
-                Rectangle().fill(.ultraThinMaterial).opacity(0.95)
-                LinearGradient(colors: [.white.opacity(0.1), .white.opacity(0.02)], startPoint: .topLeading, endPoint: .bottomTrailing)
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.05)], startPoint: .top, endPoint: .bottom), lineWidth: 1))
-        .shadow(color: .black.opacity(0.25), radius: 25, y: 10)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 4)
     }
 
     private var overlays: some View {
