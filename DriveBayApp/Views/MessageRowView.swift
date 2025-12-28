@@ -37,7 +37,14 @@ struct MessageRowView: View {
                         .padding(.horizontal, 16)
                         .background(isUser ? DriveBayTheme.accent.opacity(0.8) : Color.gray.opacity(0.25))
                         .foregroundColor(.white)
-                        .cornerRadius(18, corners: isUser ? [.topLeft, .topRight, .bottomLeft] : [.topLeft, .topRight, .bottomRight])
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                cornerRadii: RectangleCornerRadii(
+                                    topLeading: 18,
+                                    bottomLeading: isUser ? 18 : 0, bottomTrailing: isUser ? 0 : 18, topTrailing: 18
+                                )
+                            )
+                        )
                 }
             }
             if !isUser { Spacer() }
