@@ -1,30 +1,46 @@
+// Views/ListingCarouselView.swift
 import SwiftUI
 
 struct ListingCarouselView: View {
     let listings: [Listing]
     let isLoggedIn: Bool
-    
     let onBookAction: (Listing) -> Void
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            
-            Text("Top \(listings.count) Results:")
-                .font(.subheadline.bold())
-                .foregroundColor(.white.opacity(0.8))
-                .padding(.horizontal, 4)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Top Results")
+                    .font(.title2.bold())
+                    .foregroundColor(.white)
                 
-            VStack(spacing: 12) {
-                ForEach(listings) { listing in
-                    ListingCardView(listing: listing, isLoggedIn: isLoggedIn) {
-                        onBookAction(listing)
+                Spacer()
+                
+                Text("\(listings.count) spots")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .padding(.horizontal)
+            
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 16) {
+                    ForEach(listings) { listing in
+                        ListingCardView(
+                            listing: listing,
+                            isLoggedIn: isLoggedIn,
+                            onBook: {
+                                onBookAction(listing)
+                            }
+                        )
+                        .transition(.scale.combined(with: .opacity))
                     }
                 }
+                .padding(.horizontal)
             }
-            .padding(.top, 4)
         }
-        .padding(.horizontal, 8)
         .padding(.vertical, 12)
-        .background(Color.black.opacity(0.2))
-        .cornerRadius(16)
+        .background(Color.black.opacity(0.15))
+        .cornerRadius(28)
+        .overlay(RoundedRectangle(cornerRadius: 28).strokeBorder(DriveBayTheme.glassBorder.opacity(0.3)))
+        .padding(.horizontal, 8)
     }
 }

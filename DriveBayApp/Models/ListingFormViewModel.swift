@@ -3,6 +3,7 @@ import FirebaseFirestore
 import FirebaseAuth
 import Combine
 import MapKit
+import CoreLocation
 
 final class ListingFormViewModel: ObservableObject {
     
@@ -145,22 +146,39 @@ final class ListingFormViewModel: ObservableObject {
 
     // MARK: - Firebase Operations
     private func saveToFirebase(rate: Double) async throws {
-        guard let user = Auth.auth().currentUser else {
-            throw NSError(domain: "AuthError", code: 0,
-                          userInfo: [NSLocalizedDescriptionKey: "You must be logged in"])
+        guard let user = Auth.auth().currentUser else { return }
+        
+        // 1. Get official MapKit data instead of just raw coordinates
+        let fullAddress = "\(address), \(city), \(state), \(zipCode), \(country)"
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = fullAddress
+        let search = MKLocalSearch(request: request)
+        let response = try await search.start()
+        
+        guard let placemark = response.mapItems.first?.placemark else {
+            throw NSError(domain: "Geocode", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid location"])
         }
-
-        let coords = try await getCoordinates()
-        let ref = Firestore.firestore().collection("listings").document()
+        
+        let coords = placemark.coordinate
+        let hash = GeohashHelper.encode(latitude: coords.latitude, longitude: coords.longitude)
+        
+        // 2. Extract Standardized Names
+        // This ensures "Canada" is saved as "Canada" and "ON" or "Ontario" matches MapKit's standard
+        let standardizedCity = placemark.locality ?? city
+        let standardizedState = placemark.administrativeArea ?? state
+        let standardizedCountry = placemark.country ?? country
+        
+        let db = Firestore.firestore()
+        let ref = db.collection("listings").document()
 
         let listing = Listing(
             id: ref.documentID,
             ownerId: user.uid,
-            address: address,
-            city: city,
-            state: state,
-            zipCode: zipCode,
-            country: country,
+            address: address, // Keep user's specific street address
+            city: standardizedCity,
+            state: standardizedState,
+            zipCode: placemark.postalCode ?? zipCode,
+            country: standardizedCountry,
             description: description.isEmpty ? nil : description,
             rate: rate,
             date: date,
@@ -170,34 +188,42 @@ final class ListingFormViewModel: ObservableObject {
             createdAt: Timestamp(),
             latitude: coords.latitude,
             longitude: coords.longitude,
+            geohash: hash,
             isActive: true
         )
 
         try ref.setData(from: listing)
     }
-
+    
     private func updateListingInFirebase(id: String, rate: Double) async throws {
-        let coords = try await getCoordinates()
+        let fullAddress = "\(address), \(city), \(state), \(zipCode), \(country)"
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = fullAddress
+        let search = MKLocalSearch(request: request)
+        let response = try await search.start()
+        
+        guard let placemark = response.mapItems.first?.placemark else { return }
+        
+        let coords = placemark.coordinate
+        let hash = GeohashHelper.encode(latitude: coords.latitude, longitude: coords.longitude)
 
         let updateData: [String: Any] = [
             "address": address,
-            "city": city,
-            "state": state,
-            "zipCode": zipCode,
-            "country": country,
+            "city": placemark.locality ?? city,
+            "state": placemark.administrativeArea ?? state,
+            "country": placemark.country ?? country,
+            "zipCode": placemark.postalCode ?? zipCode,
             "description": description.isEmpty ? NSNull() : description,
             "rate": rate,
             "startTime": startTime,
             "endTime": endTime,
             "contactEmail": contactEmail,
             "latitude": coords.latitude,
-            "longitude": coords.longitude
+            "longitude": coords.longitude,
+            "geohash": hash
         ]
 
-        try await Firestore.firestore()
-            .collection("listings")
-            .document(id)
-            .updateData(updateData)
+        try await Firestore.firestore().collection("listings").document(id).updateData(updateData)
     }
 
     // MARK: - Helpers

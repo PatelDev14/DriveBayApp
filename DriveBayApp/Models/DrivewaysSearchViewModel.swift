@@ -4,75 +4,109 @@ import FirebaseFirestore
 import MapKit
 
 class DrivewaysSearchViewModel: ObservableObject {
-    @Published var city = ""
-    @Published var state = ""
-    @Published var country = ""
-    @Published var zipCode = ""
-    @Published var address: String = ""
-    
     @Published var listings: [Listing] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var didSearch = false
     
+    // We only need one input for Geo-search
+    @Published var searchQuery: String = ""
     func searchDriveways() {
-        // Validation
-        guard !(city.isEmpty && state.isEmpty && country.isEmpty && zipCode.isEmpty) else {
-            errorMessage = "Please enter a location to search."
-            return
-        }
-        
-        errorMessage = nil
+        guard !searchQuery.isEmpty else { return }
         isLoading = true
-        didSearch = true
-        
-        let db = Firestore.firestore()
-        var query: Query = db.collection("listings").whereField("isActive", isEqualTo: true)
-        
-        // FIX: Remove forced Uppercasing/Capitalization that causes case-mismatch with DB
-        if !city.isEmpty {
-            let cleanedCity = city.trimmingCharacters(in: .whitespaces)
-            query = query.whereField("city", isEqualTo: cleanedCity)
-        }
-        
-        if !state.isEmpty {
-            let cleanedState = state.trimmingCharacters(in: .whitespaces)
-            query = query.whereField("state", isEqualTo: cleanedState)
-        }
-        
-        if !country.isEmpty {
-            let cleanedCountry = country.trimmingCharacters(in: .whitespaces)
-            query = query.whereField("country", isEqualTo: cleanedCountry)
-        }
-        
-        if !zipCode.isEmpty {
-            query = query.whereField("zipCode", isEqualTo: zipCode.trimmingCharacters(in: .whitespaces))
-        }
+        errorMessage = nil
         
         Task {
             do {
-                // NOTE: Firestore requires an INDEX for queries with multiple 'where' + 'order'
-                // If this crashes or fails, check your Xcode console for a link to create the index.
-                let snapshot = try await query
-                    .getDocuments()
+                let request = MKLocalSearch.Request()
+                request.naturalLanguageQuery = searchQuery
+                let search = MKLocalSearch(request: request)
+                let response = try await search.start()
                 
-                let results = snapshot.documents.compactMap { document in
-                    try? document.data(as: Listing.self)
+                guard let item = response.mapItems.first?.placemark else {
+                    await MainActor.run { self.isLoading = false }
+                    return
                 }
+                let center = item.coordinate
                 
-                await MainActor.run {
-                    self.listings = results
-                    self.isLoading = false
-                    if results.isEmpty {
-                        self.errorMessage = "No driveways found in \(city)."
+                let db = Firestore.firestore()
+                let collection = db.collection("listings").whereField("isActive", isEqualTo: true)
+                
+                // 1. BROAD SEARCH (State or Country)
+                // If the search result is just a province or country (no street/city)
+                if item.thoroughfare == nil && item.locality == nil {
+                    var query: Query = collection
+                    
+                    if let state = item.administrativeArea {
+                        query = query.whereField("state", isEqualTo: state)
+                    } else if let country = item.country {
+                        query = query.whereField("country", isEqualTo: country)
+                    }
+                    
+                    let snapshot = try await query.getDocuments()
+                    let results = snapshot.documents.compactMap { try? $0.data(as: Listing.self) }
+                    
+                    await MainActor.run {
+                        self.listings = results
+                        self.finalizeSearch()
                     }
                 }
+                // 2. SPECIFIC SEARCH (City, Zip, or Address)
+                                else {
+                                    // 1. Generate a WIDE search prefix (3 characters)
+                                    // For your Ontario listings, this will be "dpz"
+                                    let precision = 3
+                                    let centerHash = GeohashHelper.encode(latitude: center.latitude, longitude: center.longitude, precision: precision)
+                                    
+                                    let start = centerHash
+                                    let end = centerHash + "~"
+                                    
+                                    // 2. Fetch everything in that broad region
+                                    let snapshot = try await collection
+                                        .order(by: "geohash")
+                                        .start(at: [start])
+                                        .end(at: [end])
+                                        .getDocuments()
+                                    
+                                    let results = snapshot.documents.compactMap { try? $0.data(as: Listing.self) }
+                                    
+                                    // 3. APPLY RADIUS FILTER (The "Smart" part)
+                                    let searchCenter = CLLocation(latitude: center.latitude, longitude: center.longitude)
+                                    let radiusLimit: Double = 30000 // 30km - comfortable for GTA cities
+                                    
+                                    let filtered = results.filter { listing in
+                                        guard let lat = listing.latitude, let lon = listing.longitude else { return false }
+                                        let listingLoc = CLLocation(latitude: lat, longitude: lon)
+                                        let distance = listingLoc.distance(from: searchCenter)
+                                        return distance <= radiusLimit
+                                    }
+                                    
+                                    // 4. Sort by proximity
+                                    let sortedResults = filtered.sorted {
+                                        let loc1 = CLLocation(latitude: $0.latitude ?? 0, longitude: $0.longitude ?? 0)
+                                        let loc2 = CLLocation(latitude: $1.latitude ?? 0, longitude: $1.longitude ?? 0)
+                                        return loc1.distance(from: searchCenter) < loc2.distance(from: searchCenter)
+                                    }
+                                    
+                                    await MainActor.run {
+                                        self.listings = sortedResults
+                                        self.finalizeSearch()
+                                    }
+                                }
             } catch {
                 await MainActor.run {
-                    self.errorMessage = "Search error: \(error.localizedDescription)"
+                    self.errorMessage = error.localizedDescription
                     self.isLoading = false
                 }
             }
+        }
+    }
+    
+    private func finalizeSearch() {
+        self.isLoading = false
+        self.didSearch = true
+        if self.listings.isEmpty {
+            self.errorMessage = "No driveways found for '\(searchQuery)'."
         }
     }
 }

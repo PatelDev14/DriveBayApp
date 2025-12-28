@@ -11,13 +11,13 @@ struct SignUpView: View {
     @State private var isSecureConfirm = true
     @State private var isLoading = false
     @State private var errorMessage: String?
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 AnimatedGradientBackground()
                     .ignoresSafeArea()
-
+                
                 VStack(spacing: 32) {
                     // Header
                     VStack(spacing: 12) {
@@ -25,17 +25,17 @@ struct SignUpView: View {
                             .font(.system(size: 64))
                             .foregroundStyle(DriveBayTheme.accent)
                             .shadow(color: DriveBayTheme.glow, radius: 20, y: 10)
-
+                        
                         Text("Create Account")
                             .font(.system(size: 40, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
-
+                        
                         Text("Join DriveBay and start earning")
                             .font(.title3)
                             .foregroundStyle(.white.opacity(0.8))
                     }
                     .padding(.top, 40)
-
+                    
                     // Glass Card — exact same style as everywhere
                     GlassCard {
                         VStack(spacing: 24) {
@@ -56,7 +56,7 @@ struct SignUpView: View {
                                 RoundedRectangle(cornerRadius: 18)
                                     .strokeBorder(DriveBayTheme.accent.opacity(0.4), lineWidth: 1.5)
                             )
-
+                            
                             // Password
                             HStack {
                                 Image(systemName: "lock.fill")
@@ -69,7 +69,7 @@ struct SignUpView: View {
                                     }
                                 }
                                 .textContentType(.newPassword)
-
+                                
                                 Button { withAnimation { isSecure.toggle() } } label: {
                                     Image(systemName: isSecure ? "eye.slash" : "eye")
                                         .foregroundStyle(.white.opacity(0.7))
@@ -78,7 +78,7 @@ struct SignUpView: View {
                             .padding(18)
                             .background(Color.white.opacity(0.08))
                             .cornerRadius(18)
-
+                            
                             // Confirm Password
                             HStack {
                                 Image(systemName: "lock.fill")
@@ -91,7 +91,7 @@ struct SignUpView: View {
                                     }
                                 }
                                 .textContentType(.newPassword)
-
+                                
                                 Button { withAnimation { isSecureConfirm.toggle() } } label: {
                                     Image(systemName: isSecureConfirm ? "eye.slash" : "eye")
                                         .foregroundStyle(.white.opacity(0.7))
@@ -100,7 +100,7 @@ struct SignUpView: View {
                             .padding(18)
                             .background(Color.white.opacity(0.08))
                             .cornerRadius(18)
-
+                            
                             // Error
                             if let errorMessage {
                                 Text(errorMessage)
@@ -108,7 +108,7 @@ struct SignUpView: View {
                                     .foregroundStyle(.red.opacity(0.9))
                                     .padding(.horizontal)
                             }
-
+                            
                             // Sign Up Button — GLOWING MASTERPIECE
                             Button(action: signUp) {
                                 HStack {
@@ -129,7 +129,7 @@ struct SignUpView: View {
                                 .shadow(color: DriveBayTheme.glow, radius: 20, y: 10)
                             }
                             .disabled(isLoading || email.isEmpty || password.isEmpty || confirmPassword.isEmpty)
-
+                            
                             // Back to Login
                             HStack {
                                 Text("Already have an account?")
@@ -145,7 +145,7 @@ struct SignUpView: View {
                         .padding(32)
                     }
                     .padding(.horizontal, 24)
-
+                    
                     Spacer()
                 }
             }
@@ -153,22 +153,29 @@ struct SignUpView: View {
         }
         .preferredColorScheme(.dark)
     }
-
     private func signUp() {
         errorMessage = nil
+        
         guard password == confirmPassword else {
             errorMessage = "Passwords do not match."
             return
         }
-
+        
+        guard password.count >= 6 else {
+            errorMessage = "Password must be at least 6 characters."
+            return
+        }
+        
         isLoading = true
         Task {
             do {
                 try await authService.signUp(email: email, password: password)
+                dismiss()
             } catch {
                 errorMessage = error.localizedDescription
             }
             isLoading = false
         }
     }
+    
 }

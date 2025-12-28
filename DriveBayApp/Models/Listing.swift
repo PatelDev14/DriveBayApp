@@ -4,7 +4,8 @@ import Foundation
 import SwiftUI
 
 struct Listing: Identifiable, Codable {
-    var id: String
+    //var id: String
+    @DocumentID var id: String?
     var ownerId: String
     var address: String
     var city: String
@@ -20,6 +21,7 @@ struct Listing: Identifiable, Codable {
     var createdAt: Timestamp?
     let latitude: Double?
     let longitude: Double?
+    var geohash: String?
     let isActive: Bool
     
     var distanceFromUser: Double? = nil
@@ -42,6 +44,7 @@ struct Listing: Identifiable, Codable {
         createdAt: Timestamp? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
+        geohash: String? = nil,
         isActive: Bool = true
     ) {
         self.id = id
@@ -60,10 +63,12 @@ struct Listing: Identifiable, Codable {
         self.createdAt = createdAt
         self.latitude = latitude
         self.longitude = longitude
+        self.geohash = geohash
         self.isActive = isActive
     }
 
-    var identifiableID: String { id }
+    //var identifiableID: String { id }
+    var identifiableID: String { id ?? UUID().uuidString }
 
     // MOVE THIS INSIDE THE STRUCT ← THIS IS THE FIX!
     
@@ -91,7 +96,6 @@ struct GlassCard<Content: View>: View {
     }
     
     var body: some View {
-        // Simple background to resemble a card on a dark theme
         content
             .background(Color.white.opacity(0.15))
             .cornerRadius(12)

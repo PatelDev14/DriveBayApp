@@ -105,7 +105,6 @@ struct PasswordResetView: View {
         .preferredColorScheme(.dark)
     }
 
-    // Your existing function — unchanged
     func sendPasswordReset() async {
         guard !email.isEmpty else {
             alertMessage = "Please enter your email address."
@@ -115,13 +114,12 @@ struct PasswordResetView: View {
 
         isLoading = true
         defer { isLoading = false }
-
         do {
             try await authService.sendPasswordReset(email: email)
-            alertMessage = "A password reset link has been sent to \(email).\nCheck your inbox (and spam folder)."
+            alertMessage = "If an account exists with \(email), a password reset link has been sent.\nCheck your inbox and spam folder."
             showAlert = true
         } catch {
-            alertMessage = "Failed to send reset link.\n\(error.localizedDescription)"
+            alertMessage = "Failed to send reset link. Please try again."
             showAlert = true
         }
     }

@@ -1,90 +1,120 @@
+// Components/ListingCardView.swift
 import SwiftUI
+
 struct ListingCardView: View {
-    @State private var selectedListing: Listing? = nil
-    
     let listing: Listing
     let isLoggedIn: Bool
     let onBook: () -> Void
     
-    // Use a compact style for displaying within a list/carousel
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            
-            // 1. HEADER & DISTANCE
-            HStack(spacing: 12) {
-                Image(systemName: "car.side.fill")
-                    .font(.title2)
-                    .foregroundStyle(DriveBayTheme.accent)
+        VStack(alignment: .leading, spacing: 14) {
+            headerSection
+            Divider().background(Color.white.opacity(0.1))
+            timeAndDescriptionSection
+            bookButtonSection
+        }
+        .padding(20)
+        .background(Color.white.opacity(0.08))
+        .cornerRadius(24)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .strokeBorder(DriveBayTheme.glassBorder.opacity(0.6), lineWidth: 1.2)
+        )
+        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+    }
+    
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(listing.address)
+                    .font(.headline.bold())
+                    .foregroundColor(.white)
+                    .lineLimit(1)
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(listing.address)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    
-                    Text("\(listing.city), \(listing.state) • \(formattedDistance)")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                        .lineLimit(1)
-                }
-                
-                Spacer()
-                
-                // Rate Tag (Prominent)
-                Text("$\(String(format: "%.2f", listing.rate))/hr")
-                    .font(.subheadline.bold())
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.green.opacity(0.2))
-                    .cornerRadius(8)
+                Text("\(listing.city), \(listing.state)")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
             }
             
-            Divider().background(Color.white.opacity(0.1))
+            Spacer()
             
-            // 2. TIME & DESCRIPTION
-            HStack {
+            VStack(spacing: 2) {
+                Text("$\(String(format: "%.2f", listing.rate))")
+                    .font(.title3.bold())
+                    .foregroundStyle(
+                        LinearGradient(colors: [.green, .mint], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                Text("/hr")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.green.opacity(0.15))
+            .cornerRadius(16)
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.green.opacity(0.4)))
+        }
+    }
+    
+    private var timeAndDescriptionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
                 Image(systemName: "clock.fill")
                     .foregroundStyle(.purple)
                 
                 Text("\(listing.startTime) – \(listing.endTime)")
                     .font(.subheadline)
-                    .foregroundColor(DriveBayTheme.accent)
+                    .foregroundStyle(DriveBayTheme.accent)
                 
                 Spacer()
                 
-                Button {
-                    onBook()
-                    if isLoggedIn {
-                            selectedListing = listing
-                        }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(isLoggedIn ? "Book" : "Log In")
-                        Image(systemName: "arrow.forward.circle.fill")
-                    }
-                    .font(.subheadline.bold())
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(isLoggedIn ? DriveBayTheme.accent : Color.gray)
-                    .foregroundColor(.black)
-                    .cornerRadius(8)
+                if let distance = listing.distanceFromUser {
+                    Text(String(format: "%.1f km away", distance))
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.6))
                 }
-                .disabled(!isLoggedIn)
-                
             }
-//            .sheet(item: $selectedListing) { listing in
-//                BookingRequestView(listing: listing)
-//            }
+            
+            if let description = listing.description, !description.isEmpty {
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
+                    .lineLimit(2)
+            }
         }
-        .padding(16)
-        // Lighter background, no huge shadow or excessive padding
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.1)))
     }
     
-    private var formattedDistance: String {
-        guard let dist = listing.distanceFromUser else { return "Distance unknown" }
-        return String(format: "%.1f km away", dist)
+    private var bookButtonSection: some View {
+        BookButton(isLoggedIn: isLoggedIn, action: onBook)
+    }
+}
+
+// MARK: - Book Button (Inside ListingCardView.swift)
+// Inside ListingCardView.swift
+private struct BookButton: View {
+    let isLoggedIn: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            print("Triggering booking for listing...") // Debug console check
+            action()
+        }) {
+            HStack {
+                Text(isLoggedIn ? "Request to Book" : "Log In to Book")
+                    .font(.headline)
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.title3)
+            }
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                isLoggedIn ? DriveBayTheme.accent : Color.gray
+            )
+            .cornerRadius(16)
+        }
+        .contentShape(Rectangle())
+        .disabled(!isLoggedIn)
     }
 }
