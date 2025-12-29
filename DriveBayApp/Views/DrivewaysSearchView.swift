@@ -50,7 +50,7 @@ struct DrivewaysSearchView: View {
                                     .font(.headline)
                                     .foregroundColor(.white.opacity(0.9))
                                 
-                                TextField("e.g. Oshawa, ON or 50 Bison Dr", text: $addressInput)
+                                TextField("Search a driveway..", text: $addressInput)
                                     .padding(18)
                                     .background(Color.white.opacity(0.08))
                                     .cornerRadius(18)

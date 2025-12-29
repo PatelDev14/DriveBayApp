@@ -6,7 +6,7 @@ struct BookingRequestView: View {
     let listing: Listing
     @Environment(\.dismiss) var dismiss
     
-    @State private var selectedDate = Date()
+    private var selectedDate: Date { listing.date }
     @State private var startTime = "09:00"
     @State private var endTime = "17:00"
     @State private var isSending = false
@@ -76,14 +76,26 @@ struct BookingRequestView: View {
                         
                         // MARK: - Request Form
                         VStack(spacing: 24) {
-                            DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
-                                .datePickerStyle(.graphical)
-                                .padding(10)
-                                .background(Color.white.opacity(0.05))
-                                .cornerRadius(18)
-                                .onChange(of: selectedDate) { _ in
-                                    loadBookingsAndUpdateAvailability()
+                            HStack(spacing: 16) {
+                                Image(systemName: "calendar")
+                                    .font(.title2)
+                                    .foregroundStyle(DriveBayTheme.accent)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Booking Date")
+                                        .font(.subheadline)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    
+                                    Text(selectedDate.formatted(date: .long, time: .omitted))
+                                        .font(.title3.bold())
+                                        .foregroundColor(.white)
                                 }
+                                
+                                Spacer()
+                            }
+                            .padding(20)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(18)
                             
                             HStack(spacing: 16) {
                                 ClockPicker(title: "Start Time", selection: $startTime)
@@ -132,8 +144,11 @@ struct BookingRequestView: View {
                         .foregroundColor(.white)
                 }
             }
+//            .onAppear {
+//                selectedDate = listing.date
+//                loadBookingsAndUpdateAvailability()
+//            }
             .onAppear {
-                selectedDate = listing.date
                 loadBookingsAndUpdateAvailability()
             }
         }

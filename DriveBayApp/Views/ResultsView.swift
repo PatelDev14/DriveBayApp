@@ -152,7 +152,7 @@ struct FilterSheetView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "121212").ignoresSafeArea()
+            Color("121212").ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 30) {
                 HStack {

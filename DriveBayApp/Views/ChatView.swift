@@ -140,24 +140,6 @@ struct ChatView: View {
     
     private var userMenu: some View {
         Menu {
-            Button { showingSearch = true } label: {
-                Label("Search Driveways", systemImage: "magnifyingglass.circle.fill")
-            }
-            Button {
-                activeSheet = .dashboard(.driveways)
-            } label: {
-                Label("My Driveway", systemImage: "house.fill")
-            }
-            Button {
-                activeSheet = .dashboard(.bookings)
-            } label: {
-                Label("My Bookings", systemImage: "list.bullet.clipboard")
-            }
-            Button {
-                activeSheet = .dashboard(.requests)
-            } label: {
-                Label("Incoming Requests", systemImage: "bell.fill")
-            }
             Button {
                 activeSheet = .profile
             } label: {
@@ -170,6 +152,7 @@ struct ChatView: View {
                 Circle()
                     .fill(.ultraThinMaterial)
                     .frame(width: 44, height: 44)
+                    .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
                 
                 Circle()
                     .stroke(DriveBayTheme.glow.opacity(0.6), lineWidth: 1)
@@ -191,18 +174,19 @@ struct ChatView: View {
                     .fill(DriveBayTheme.glow.opacity(0.4))
                     .frame(width: 140, height: 140)
                     .blur(radius: 30)
-                
-                Image(systemName: "parkingsign.circle.fill")
-                    .font(.system(size: 100, weight: .black))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [DriveBayTheme.accent, DriveBayTheme.secondary],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+            
+                Image("DriveBay")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 110, height: 110)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .stroke(DriveBayTheme.glow, lineWidth: 4)
                         )
-                    )
-                    .shadow(color: DriveBayTheme.glow, radius: 20)
-            }
+                        .shadow(color: DriveBayTheme.glow, radius: 20, y: 10)
+                }
             
             VStack(spacing: 12) {
                 Text("Welcome to DriveBay")
