@@ -9,6 +9,7 @@ import GoogleSignInSwift
 import Combine
 import CryptoKit
 import FirebaseCore
+import FirebaseStorage
 
 // MARK: - AuthService
 
@@ -152,6 +153,42 @@ class AuthService: ObservableObject {
         }.joined()
         
         return hashString
+    }
+    
+    func deleteAccount() async throws {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        
+        // Delete all listings owned by user
+        let listingsQuery = db.collection("listings").whereField("ownerId", isEqualTo: uid)
+        let listingsSnapshot = try await listingsQuery.getDocuments()
+        for doc in listingsSnapshot.documents {
+            try await db.collection("listings").document(doc.documentID).delete()
+        }
+        
+        // Delete all bookings related to user (renter or owner)
+        let bookingsQuery = db.collection("bookings").whereField("renterId", isEqualTo: uid)
+        let bookingsSnapshot = try await bookingsQuery.getDocuments()
+        for doc in bookingsSnapshot.documents {
+            try await db.collection("bookings").document(doc.documentID).delete()
+        }
+        
+        let bookingsOwnerQuery = db.collection("bookings").whereField("listingOwnerId", isEqualTo: uid)
+        let bookingsOwnerSnapshot = try await bookingsOwnerQuery.getDocuments()
+        for doc in bookingsOwnerSnapshot.documents {
+            try await db.collection("bookings").document(doc.documentID).delete()
+        }
+        
+        // Delete profile photo from Storage (if exists)
+        let storageRef = Storage.storage().reference().child("profilePhotos/\(uid).jpg")
+        try? await storageRef.delete()
+        
+        // Delete user document
+        try await db.collection("users").document(uid).delete()
+        
+        // Finally, delete the Auth user
+        try await Auth.auth().currentUser?.delete()
     }
 }
 

@@ -16,7 +16,7 @@ class ProfileViewModel: ObservableObject {
     @Published var showSuccess = false
     @Published var showError = false
     @Published var errorMessage: String?
-    @Published var profileImageUrl: String? = ""
+    @Published var profileImageUrl: String? = nil
     
     private let db = Firestore.firestore()
     
@@ -48,6 +48,12 @@ class ProfileViewModel: ObservableObject {
                 self?.firstName = data["firstName"] as? String ?? ""
                 self?.lastName = data["lastName"] as? String ?? ""
                 self?.phoneNumber = data["phoneNumber"] as? String ?? ""
+                
+                if let urlString = data["photoURL"] as? String, !urlString.isEmpty {
+                    self?.profileImageUrl = urlString
+                } else {
+                    self?.profileImageUrl = nil
+                }
             }
         }
     }
@@ -78,29 +84,38 @@ class ProfileViewModel: ObservableObject {
             }
         }
     }
-    func uploadProfileImage(_ image: UIImage) async {
+    
+    func uploadProfilePhoto(_ data: Data) async {
         isSaving = true
-        guard let uid = Auth.auth().currentUser?.uid,
-              let imageData = image.jpegData(compressionQuality: 0.5) else { return }
+        defer { isSaving = false }
         
-        let storageRef = Storage.storage().reference().child("profile_images/\(uid).jpg")
+        guard let uid = Auth.auth().currentUser?.uid else {
+            errorMessage = "User not authenticated"
+            showError = true
+            return
+        }
+        
+        let storageRef = Storage.storage().reference().child("profilePhotos/\(uid).jpg")
         
         do {
-            _ = try await storageRef.putDataAsync(imageData)
+            let metadata = StorageMetadata()
+            metadata.contentType = "image/jpeg"
+            _ = try await storageRef.putDataAsync(data, metadata: metadata)
+            
             let url = try await storageRef.downloadURL()
+            
+            try await Firestore.firestore()
+                .collection("users")
+                .document(uid)
+                .setData(["photoURL": url.absoluteString], merge: true)
+            
             self.profileImageUrl = url.absoluteString
+            print("Photo uploaded successfully — will appear in a few seconds")
             
-            // Save the URL to the user's Firestore document
-            try await Firestore.firestore().collection("users").document(uid).setData([
-                "profileImageUrl": url.absoluteString
-            ], merge: true)
-            
-            isSaving = false
         } catch {
-            print("Error uploading image: \(error)")
-            isSaving = false
+            print("Upload error: \(error)")
+            errorMessage = "Failed to upload photo"
+            showError = true
         }
     }
 }
-
-

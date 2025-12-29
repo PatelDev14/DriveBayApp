@@ -18,3 +18,11 @@ build/
 *.perspectivev3
 !default.perspectivev3
 xcuserdata/
+
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebug-debug.log
+firestore-debug.log
+ui-debug.log

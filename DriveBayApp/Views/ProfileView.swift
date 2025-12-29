@@ -5,8 +5,11 @@ import PhotosUI
 
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authService: AuthService
     @StateObject private var viewModel = ProfileViewModel()
     @State private var isEditing = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var showDeleteConfirmation = false
     
     let onLogout: () -> Void
     
@@ -15,164 +18,16 @@ struct ProfileView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                VStack {
-                    Circle()
-                        .fill(DriveBayTheme.glow.opacity(0.15))
-                        .frame(width: 350)
-                        .blur(radius: 80)
-                        .offset(x: -100, y: -100)
-                    Spacer()
-                    Circle()
-                        .fill(DriveBayTheme.accent.opacity(0.1))
-                        .frame(width: 300)
-                        .blur(radius: 80)
-                        .offset(x: 100, y: 100)
-                }
-                .ignoresSafeArea()
+                backgroundGlowOrbs
                 
                 ScrollView {
                     VStack(spacing: 32) {
+                        profileHeader
                         
-                        // === HEADER SECTION ===
-                        VStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(DriveBayTheme.glow.opacity(0.3))
-                                    .frame(width: 120, height: 120)
-                                    .blur(radius: 20)
-                                
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 80))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [DriveBayTheme.accent, DriveBayTheme.secondary],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .shadow(color: DriveBayTheme.glow.opacity(0.5), radius: 10)
-                            }
-                            
-                            VStack(spacing: 4) {
-                                Text(isEditing ? "Update Profile" : (viewModel.displayName.isEmpty ? "Welcome" : viewModel.displayName))
-                                    .font(.title2.bold())
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .padding(.top, 30)
-
                         if isEditing {
-                            // === EDIT MODE ===
-                            VStack(spacing: 25) {
-                                // Personal Info Section
-                                profileSectionLabel("PERSONAL DETAILS")
-                                
-                                VStack(spacing: 16) {
-                                    GlassTextField(placeholder: "First Name", text: $viewModel.firstName)
-                                    GlassTextField(placeholder: "Last Name", text: $viewModel.lastName)
-                                    GlassTextField(placeholder: "Phone Number", text: $viewModel.phoneNumber)
-                                        .keyboardType(.phonePad)
-                                }
-                                
-                                // Email Section (Locked)
-                                profileSectionLabel("ACCOUNT EMAIL")
-                                
-                                HStack(spacing: 15) {
-                                    Image(systemName: "envelope.fill")
-                                        .foregroundColor(DriveBayTheme.accent.opacity(0.6))
-                                    
-                                    Text(viewModel.email) // Pre-populated from ViewModel
-                                        .foregroundColor(.white.opacity(0.6))
-                                        .font(.body)
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "lock.fill")
-                                        .font(.caption2)
-                                        .foregroundColor(.white.opacity(0.3))
-                                }
-                                .padding(18)
-                                .background(Color.white.opacity(0.05))
-                                .cornerRadius(16)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                                )
-                                
-                                // Save Button
-                                Button(action: {
-                                    viewModel.saveProfile()
-                                    withAnimation(.spring()) {
-                                        isEditing = false
-                                    }
-                                }) {
-                                    if viewModel.isSaving {
-                                        ProgressView().tint(.white)
-                                    } else {
-                                        Text("Save Changes")
-                                            .font(.headline)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
-                                            .background(DriveBayTheme.accent)
-                                            .foregroundColor(.white)
-                                            .cornerRadius(16)
-                                            .shadow(color: DriveBayTheme.glow.opacity(0.4), radius: 10, y: 5)
-                                    }
-                                }
-                                .padding(.top, 10)
-                            }
-                            .padding(.horizontal, 24)
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
-                            
+                            editModeContent
                         } else {
-                            // === SUMMARY MODE ===
-                            VStack(spacing: 24) {
-                                
-                                // Information Card
-                                VStack(spacing: 20) {
-                                    summaryRow(icon: "envelope.fill", title: "Email", value: viewModel.email)
-                                    
-                                    if !viewModel.phoneNumber.isEmpty {
-                                        Divider().background(Color.white.opacity(0.1))
-                                        summaryRow(icon: "phone.fill", title: "Phone", value: viewModel.phoneNumber)
-                                    }
-                                }
-                                .padding(24)
-                                .background(Color.white.opacity(0.03))
-                                .cornerRadius(24)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 24)
-                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                                )
-
-                                // Action Buttons
-                                VStack(spacing: 16) {
-                                    Button(action: {
-                                        withAnimation(.spring()) { isEditing = true }
-                                    }) {
-                                        Text("Edit Profile")
-                                            .font(.headline)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
-                                            .background(Color.white.opacity(0.08))
-                                            .foregroundColor(.white)
-                                            .cornerRadius(16)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 16)
-                                                    .stroke(DriveBayTheme.accent.opacity(0.4), lineWidth: 1)
-                                            )
-                                    }
-
-                                    Button(action: onLogout) {
-                                        Label("Logout", systemImage: "arrow.right.square")
-                                            .font(.headline)
-                                            .foregroundColor(.red.opacity(0.8))
-                                            .padding(.top, 10)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 24)
-                            .transition(.move(edge: .leading).combined(with: .opacity))
+                            summaryModeContent
                         }
                     }
                     .padding(.bottom, 50)
@@ -181,7 +36,9 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button { dismiss() } label: {
+                    Button {
+                        dismiss()
+                    } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "chevron.left")
                             Text("Back")
@@ -190,20 +47,247 @@ struct ProfileView: View {
                     }
                 }
             }
-            // 💡 THIS TRIGGERS THE PRE-POPULATION
-            .onAppear {
-                viewModel.loadProfile()
-                // Auto-switch to edit mode if name is missing
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    if viewModel.firstName.isEmpty && viewModel.lastName.isEmpty {
-                        withAnimation { isEditing = true }
+            .onChange(of: selectedPhoto) { handlePhotoSelection($0) }
+            .onAppear { onAppearSetup() }
+            .alert("Delete Profile?", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    Task {
+                        do {
+                            try await authService.deleteAccount()
+                            onLogout()
+                            dismiss()
+                        } catch {
+                            print("Delete failed: \(error)")
+                        }
                     }
                 }
+            } message: {
+                Text("This will permanently delete your account, all listings, bookings, and data. This cannot be undone.")
             }
         }
     }
     
-    // --- HELPER SUBVIEWS ---
+    // MARK: - Subviews
+    
+    private var backgroundGlowOrbs: some View {
+        VStack {
+            Circle()
+                .fill(DriveBayTheme.glow.opacity(0.15))
+                .frame(width: 350)
+                .blur(radius: 80)
+                .offset(x: -100, y: -100)
+            Spacer()
+            Circle()
+                .fill(DriveBayTheme.accent.opacity(0.1))
+                .frame(width: 300)
+                .blur(radius: 80)
+                .offset(x: 100, y: 100)
+        }
+        .ignoresSafeArea()
+    }
+    
+    private var profileHeader: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(DriveBayTheme.glow.opacity(0.3))
+                    .frame(width: 140, height: 140)
+                    .blur(radius: 30)
+                
+                if let urlString = viewModel.profileImageUrl,
+                   !urlString.isEmpty,
+                   let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(1.2)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(DriveBayTheme.accent, lineWidth: 3))
+                                .shadow(color: DriveBayTheme.glow, radius: 15)
+                        case .failure:
+                            fallbackIcon()
+                        }
+                    }
+                    .frame(width: 120, height: 120)
+                } else {
+                    fallbackIcon()
+                }
+                
+                if isEditing {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                Image(systemName: "camera.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.white)
+                                    .padding(10)
+                                    .background(DriveBayTheme.accent)
+                                    .clipShape(Circle())
+                                    .shadow(color: DriveBayTheme.glow, radius: 8)
+                            }
+                        }
+                    }
+                    .frame(width: 120, height: 120)
+                }
+            }
+            
+            VStack(spacing: 4) {
+                Text(isEditing ? "Update Profile" : (viewModel.displayName.isEmpty ? "Welcome" : viewModel.displayName))
+                    .font(.title2.bold())
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(.top, 30)
+    }
+    
+    private var editModeContent: some View {
+        VStack(spacing: 25) {
+            profileSectionLabel("PERSONAL DETAILS")
+            
+            VStack(spacing: 16) {
+                GlassTextField(placeholder: "First Name", text: $viewModel.firstName)
+                GlassTextField(placeholder: "Last Name", text: $viewModel.lastName)
+                GlassTextField(placeholder: "Phone Number", text: $viewModel.phoneNumber)
+                    .keyboardType(.phonePad)
+            }
+            
+            profileSectionLabel("ACCOUNT EMAIL")
+            
+            HStack(spacing: 15) {
+                Image(systemName: "envelope.fill")
+                    .foregroundColor(DriveBayTheme.accent.opacity(0.6))
+                Text(viewModel.email)
+                    .foregroundColor(.white.opacity(0.6))
+                    .font(.body)
+                Spacer()
+                Image(systemName: "lock.fill")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.3))
+            }
+            .padding(18)
+            .background(Color.white.opacity(0.05))
+            .cornerRadius(16)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            
+            Button {
+                viewModel.saveProfile()
+                withAnimation(.spring()) { isEditing = false }
+            } label: {
+                if viewModel.isSaving {
+                    ProgressView().tint(.white)
+                } else {
+                    Text("Save Changes")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(DriveBayTheme.accent)
+                        .foregroundColor(.white)
+                        .cornerRadius(16)
+                        .shadow(color: DriveBayTheme.glow.opacity(0.4), radius: 10, y: 5)
+                }
+            }
+            .padding(.top, 10)
+        }
+        .padding(.horizontal, 24)
+        .transition(.move(edge: .trailing).combined(with: .opacity))
+    }
+    
+    private var summaryModeContent: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 20) {
+                summaryRow(icon: "envelope.fill", title: "Email", value: viewModel.email)
+                if !viewModel.phoneNumber.isEmpty {
+                    Divider().background(Color.white.opacity(0.1))
+                    summaryRow(icon: "phone.fill", title: "Phone", value: viewModel.phoneNumber)
+                }
+            }
+            .padding(24)
+            .background(Color.white.opacity(0.03))
+            .cornerRadius(24)
+            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            
+            VStack(spacing: 16) {
+                Button {
+                    withAnimation(.spring()) { isEditing = true }
+                } label: {
+                    Text("Edit Profile")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.white.opacity(0.08))
+                        .foregroundColor(.white)
+                        .cornerRadius(16)
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(DriveBayTheme.accent.opacity(0.4), lineWidth: 1))
+                }
+                
+                Button(action: onLogout) {
+                    Label("Logout", systemImage: "arrow.right.square")
+                        .font(.headline)
+                        .foregroundColor(.red.opacity(0.8))
+                        .padding(.top, 10)
+                }
+                
+                Button {
+                    showDeleteConfirmation = true
+                } label: {
+                    Label("Delete Profile", systemImage: "trash.fill")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.red.opacity(0.15))
+                        .foregroundColor(.red)
+                        .cornerRadius(16)
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.red.opacity(0.5), lineWidth: 1))
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+        .transition(.move(edge: .leading).combined(with: .opacity))
+    }
+    
+    private func handlePhotoSelection(_ newItem: PhotosPickerItem?) {
+        Task {
+            guard let newItem else { return }
+            do {
+                guard let data = try await newItem.loadTransferable(type: Data.self) else {
+                    print("Failed to load image data")
+                    return
+                }
+                await viewModel.uploadProfilePhoto(data)
+                viewModel.loadProfile()
+            } catch {
+                print("Photo picker error: \(error)")
+            }
+        }
+    }
+    
+    private func onAppearSetup() {
+        viewModel.loadProfile()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            if viewModel.firstName.isEmpty && viewModel.lastName.isEmpty {
+                withAnimation { isEditing = true }
+            }
+        }
+    }
+    
+    // MARK: - Helper Views
+    
+    private func fallbackIcon() -> some View {
+        Image(systemName: "person.crop.circle.fill")
+            .font(.system(size: 80))
+            .foregroundStyle(LinearGradient(colors: [DriveBayTheme.accent, DriveBayTheme.secondary], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .shadow(color: DriveBayTheme.glow.opacity(0.5), radius: 10)
+    }
     
     private func profileSectionLabel(_ text: String) -> some View {
         Text(text)
@@ -235,7 +319,6 @@ struct ProfileView: View {
 }
 
 // === STYLED TEXTFIELD ===
-
 private struct GlassTextField: View {
     let placeholder: String
     @Binding var text: String
@@ -258,33 +341,5 @@ private struct GlassTextField: View {
             )
             .foregroundColor(.white)
             .accentColor(DriveBayTheme.accent)
-    }
-}
-
-// === OPTIONAL COLOR HELPER ===
-extension Color {
-    init?(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
-        }
-
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue:  Double(b) / 255,
-            opacity: Double(a) / 255
-        )
     }
 }
