@@ -76,14 +76,14 @@ struct RequestsView: View {
             .onAppear {
                 fetchRequests()
             }
-            .alert("Delete Request?", isPresented: $showingDeleteAlert, presenting: requestToDelete) { request in
-                Button("Delete", role: .destructive) {
-                    deleteRequest(request)
+            .alert("Remove Request?", isPresented: $showingDeleteAlert, presenting: requestToDelete) { request in
+                    Button("Remove", role: .destructive) { // Changed "Delete" to "Remove"
+                        deleteRequest(request)
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } message: { request in
+                    Text("This will remove the request from your list. The renter (\(request.renterEmail)) will still be able to see the status in their history.")
                 }
-                Button("Cancel", role: .cancel) { }
-            } message: { request in
-                Text("Are you sure you want to delete the request from \(request.renterEmail)?")
-            }
         }
         .preferredColorScheme(.dark)
     }
@@ -126,19 +126,32 @@ struct RequestsView: View {
 
     // MARK: - Logic (Updated with Loading state)
     private func fetchRequests() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-        var query = Firestore.firestore().collection("bookings").whereField("listingOwnerId", isEqualTo: uid)
-        
-        if let listing = listing {
-            query = query.whereField("listingId", isEqualTo: listing.id ?? "")
+            guard let uid = Auth.auth().currentUser?.uid else { return }
+            
+            // Update: Added filter for hiddenByOwner
+            var query = Firestore.firestore().collection("bookings")
+                .whereField("listingOwnerId", isEqualTo: uid)
+                .whereField("hiddenByOwner", isEqualTo: false)
+            
+            if let listing = listing {
+                query = query.whereField("listingId", isEqualTo: listing.id ?? "")
+            }
+            
+            // It's good practice to sort by newest first
+            query.order(by: "createdAt", descending: true)
+                .addSnapshotListener { snapshot, error in
+                    isLoading = false
+                    if let error = error {
+                        print("Error fetching requests: \(error.localizedDescription)")
+                        return
+                    }
+                    withAnimation {
+                        self.requests = snapshot?.documents.compactMap { try? $0.data(as: Booking.self) } ?? []
+                    }
+                }
         }
-        
-        query.addSnapshotListener { snapshot, _ in
-            isLoading = false
-            self.requests = snapshot?.documents.compactMap { try? $0.data(as: Booking.self) } ?? []
-        }
-    }
-
+    
+    
     private func updateStatus(request: Booking, newStatus: Booking.BookingStatus) {
         guard let id = request.id else { return }
         isUpdating = true
@@ -155,10 +168,18 @@ struct RequestsView: View {
             }
         }
     }
-
+    
     private func deleteRequest(_ request: Booking) {
         guard let id = request.id else { return }
-        Firestore.firestore().collection("bookings").document(id).delete()
+        
+        Firestore.firestore().collection("bookings").document(id).updateData([
+            "hiddenByOwner": true,
+            "status": Booking.BookingStatus.cancelled.rawValue // Change status to free up the spot
+        ]) { error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+            }
+        }
     }
 }
 
@@ -305,6 +326,7 @@ struct StatusBadge: View {
         case .pending: return Color.orange.opacity(0.2)
         case .approved: return Color.green.opacity(0.2)
         case .rejected: return Color.red.opacity(0.2)
+        case .cancelled: return Color.gray.opacity(0.2)
         }
     }
     
@@ -313,6 +335,7 @@ struct StatusBadge: View {
         case .pending: return .orange
         case .approved: return .green
         case .rejected: return .red
+        case .cancelled: return .gray
         }
     }
 }

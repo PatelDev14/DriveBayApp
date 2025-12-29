@@ -58,6 +58,7 @@ final class ListingFormViewModel: ObservableObject {
         country = listing.country
         description = listing.description ?? ""
         rate = String(format: "%.2f", listing.rate)
+        date = listing.date
         startTime = listing.startTime
         endTime = listing.endTime
         contactEmail = listing.contactEmail
@@ -215,6 +216,7 @@ final class ListingFormViewModel: ObservableObject {
             "zipCode": placemark.postalCode ?? zipCode,
             "description": description.isEmpty ? NSNull() : description,
             "rate": rate,
+            "date": Timestamp(date: date),
             "startTime": startTime,
             "endTime": endTime,
             "contactEmail": contactEmail,

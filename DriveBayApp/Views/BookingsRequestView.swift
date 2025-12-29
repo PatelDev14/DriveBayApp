@@ -202,11 +202,12 @@ struct BookingRequestView: View {
         let newBooking = Booking(
             listingId: listing.id ?? "",
             listingAddress: listing.address,
+            listingTitle: listing.address,
             listingOwnerId: listing.ownerId,
             renterId: user.uid,
             renterEmail: user.email ?? "unknown@drivebay.com",
-            ownerEmail: listing.contactEmail, // Use the email from the listing!
-            totalPrice: calculatedTotal,      // Use the calculated price!
+            ownerEmail: listing.contactEmail,
+            totalPrice: calculatedTotal,
             status: .pending,
             requestedDate: selectedDate,
             startTime: startTime,
