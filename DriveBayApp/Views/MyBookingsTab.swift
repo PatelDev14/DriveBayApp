@@ -56,16 +56,16 @@ struct MyBookingsTab: View {
             .onAppear {
                 fetchMyBookings()
             }
-            .alert("Delete Booking?", isPresented: $showingDeleteAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete", role: .destructive) {
-                    if let booking = bookingToDelete {
-                        deleteBooking(booking)
+            .alert("Remove from History?", isPresented: $showingDeleteAlert) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Remove", role: .destructive) {
+                        if let booking = bookingToDelete {
+                            deleteBooking(booking)
+                        }
                     }
+                } message: {
+                    Text("This booking will be removed from your view, but will remain active if it is currently approved.")
                 }
-            } message: {
-                Text("This booking will be permanently removed from your history.")
-            }
         }
         .preferredColorScheme(.dark)
     }
@@ -108,26 +108,40 @@ struct MyBookingsTab: View {
     
     // MARK: - Logic
     private func fetchMyBookings() {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            isLoading = false
-            return
-        }
-        Firestore.firestore().collection("bookings")
-            .whereField("renterId", isEqualTo: uid)
-            .order(by: "createdAt", descending: true)
-            .addSnapshotListener { snapshot, error in
+            guard let uid = Auth.auth().currentUser?.uid else {
                 isLoading = false
-                if let error = error {
-                    print("Error: \(error.localizedDescription)")
-                    return
-                }
-                bookings = snapshot?.documents.compactMap { try? $0.data(as: Booking.self) } ?? []
+                return
             }
-    }
+            
+            // Update: We only fetch bookings where hiddenByRenter is false
+            Firestore.firestore().collection("bookings")
+                .whereField("renterId", isEqualTo: uid)
+                .whereField("hiddenByRenter", isEqualTo: false)
+                .order(by: "createdAt", descending: true)
+                .addSnapshotListener { snapshot, error in
+                    isLoading = false
+                    if let error = error {
+                        print("Error fetching bookings: \(error.localizedDescription)")
+                        return
+                    }
+                    
+                    withAnimation {
+                        self.bookings = snapshot?.documents.compactMap { try? $0.data(as: Booking.self) } ?? []
+                    }
+                }
+        }
     
     private func deleteBooking(_ booking: Booking) {
         guard let id = booking.id else { return }
-        Firestore.firestore().collection("bookings").document(id).delete { _ in }
+        
+        Firestore.firestore().collection("bookings").document(id).updateData([
+            "hiddenByRenter": true,
+            "status": Booking.BookingStatus.cancelled.rawValue // Change status to free up the spot
+        ]) { error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+            }
+        }
     }
 }
 
