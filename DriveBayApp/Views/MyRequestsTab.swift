@@ -1,3 +1,4 @@
+// Views/RequestsView.swift
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
@@ -11,6 +12,8 @@ struct RequestsView: View {
     @State private var isUpdating = false
     @State private var requestToDelete: Booking?
     @State private var showingDeleteAlert = false
+    @State private var bookingToReport: Booking?
+    @State private var showingReportForm = false
     
     private let emailService = EmailService()
     
@@ -38,6 +41,10 @@ struct RequestsView: View {
                                 onDelete: {
                                     requestToDelete = request
                                     showingDeleteAlert = true
+                                },
+                                onReport: {
+                                    bookingToReport = request
+                                    showingReportForm = true
                                 }
                             )
                             .listRowBackground(Color.clear)
@@ -53,20 +60,12 @@ struct RequestsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                            Text("Back")
-                        }
+                    Button("Back") { dismiss() }
                         .foregroundColor(.white.opacity(0.9))
                         .fontWeight(.semibold)
-                    }
                 }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        fetchRequests()
-                    } label: {
+                    Button { fetchRequests() } label: {
                         Image(systemName: "arrow.clockwise")
                             .font(.headline)
                             .foregroundColor(DriveBayTheme.accent)
@@ -76,19 +75,25 @@ struct RequestsView: View {
             .onAppear {
                 fetchRequests()
             }
-            .alert("Remove Request?", isPresented: $showingDeleteAlert, presenting: requestToDelete) { request in
-                    Button("Remove", role: .destructive) { // Changed "Delete" to "Remove"
+            .alert("Remove Request?", isPresented: $showingDeleteAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Remove", role: .destructive) {
+                    if let request = requestToDelete {
                         deleteRequest(request)
                     }
-                    Button("Cancel", role: .cancel) { }
-                } message: { request in
-                    Text("This will remove the request from your list. The renter (\(request.renterEmail)) will still be able to see the status in their history.")
                 }
+            } message: {
+                Text("This will remove the request from your list.")
+            }
+            .sheet(isPresented: $showingReportForm) {
+                if let booking = bookingToReport {
+                    ReportFormView(booking: booking, asRenter: false)
+                }
+            }
         }
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - Empty State (Standardized with Bookings)
     private var emptyRequestsView: some View {
         VStack(spacing: 24) {
             ZStack {
@@ -100,11 +105,7 @@ struct RequestsView: View {
                 Image(systemName: "tray.and.arrow.down.fill")
                     .font(.system(size: 70))
                     .foregroundStyle(
-                        LinearGradient(
-                            colors: [DriveBayTheme.accent, .white],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        LinearGradient(colors: [DriveBayTheme.accent, .white], startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                     .shadow(color: DriveBayTheme.glow.opacity(0.5), radius: 20)
             }
@@ -123,34 +124,30 @@ struct RequestsView: View {
         }
         .padding(.top, 60)
     }
-
-    // MARK: - Logic (Updated with Loading state)
-    private func fetchRequests() {
-            guard let uid = Auth.auth().currentUser?.uid else { return }
-            
-            // Update: Added filter for hiddenByOwner
-            var query = Firestore.firestore().collection("bookings")
-                .whereField("listingOwnerId", isEqualTo: uid)
-                .whereField("hiddenByOwner", isEqualTo: false)
-            
-            if let listing = listing {
-                query = query.whereField("listingId", isEqualTo: listing.id ?? "")
-            }
-            
-            // It's good practice to sort by newest first
-            query.order(by: "createdAt", descending: true)
-                .addSnapshotListener { snapshot, error in
-                    isLoading = false
-                    if let error = error {
-                        print("Error fetching requests: \(error.localizedDescription)")
-                        return
-                    }
-                    withAnimation {
-                        self.requests = snapshot?.documents.compactMap { try? $0.data(as: Booking.self) } ?? []
-                    }
-                }
-        }
     
+    private func fetchRequests() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        var query = Firestore.firestore().collection("bookings")
+            .whereField("listingOwnerId", isEqualTo: uid)
+            .whereField("hiddenByOwner", isEqualTo: false)
+        
+        if let listing = listing {
+            query = query.whereField("listingId", isEqualTo: listing.id ?? "")
+        }
+        
+        query.order(by: "createdAt", descending: true)
+            .addSnapshotListener { snapshot, error in
+                isLoading = false
+                if let error = error {
+                    print("Error fetching requests: \(error.localizedDescription)")
+                    return
+                }
+                withAnimation {
+                    self.requests = snapshot?.documents.compactMap { try? $0.data(as: Booking.self) } ?? []
+                }
+            }
+    }
     
     private func updateStatus(request: Booking, newStatus: Booking.BookingStatus) {
         guard let id = request.id else { return }
@@ -162,7 +159,14 @@ struct RequestsView: View {
                     let dateString = request.requestedDate.formatted(date: .abbreviated, time: .omitted)
                     let ownerEmail = Auth.auth().currentUser?.email ?? ""
                     Task {
-                        try? await self.emailService.sendBookingApprovedEmail(to: request.renterEmail, ownerEmail: ownerEmail, address: request.listingAddress, date: dateString, startTime: request.startTime, endTime: request.endTime)
+                        try? await self.emailService.sendBookingApprovedEmail(
+                            to: request.renterEmail,
+                            ownerEmail: ownerEmail,
+                            address: request.listingAddress,
+                            date: dateString,
+                            startTime: request.startTime,
+                            endTime: request.endTime
+                        )
                     }
                 }
             }
@@ -174,7 +178,7 @@ struct RequestsView: View {
         
         Firestore.firestore().collection("bookings").document(id).updateData([
             "hiddenByOwner": true,
-            "status": Booking.BookingStatus.cancelled.rawValue // Change status to free up the spot
+            "status": Booking.BookingStatus.cancelled.rawValue
         ]) { error in
             if let error = error {
                 print("Error: \(error.localizedDescription)")
@@ -183,12 +187,13 @@ struct RequestsView: View {
     }
 }
 
-// MARK: - Refined Incoming Request Card
+// MARK: - Incoming Request Card (Host side)
 private struct IncomingRequestCard: View {
     let request: Booking
     let isUpdating: Bool
     let onUpdateStatus: (Booking.BookingStatus) -> Void
     let onDelete: () -> Void
+    let onReport: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -235,14 +240,21 @@ private struct IncomingRequestCard: View {
                 StatusBadge(status: request.status)
             }
             
+            // Report Renter Button (only for approved)
+            if request.status == .approved {
+                Button("Report Renter") {
+                    onReport()
+                }
+                .font(.subheadline.bold())
+                .foregroundColor(.red)
+                .padding(.top, 4)
+            }
+            
             if request.status == .pending {
-                Divider()
-                    .background(Color.white.opacity(0.1))
+                Divider().background(Color.white.opacity(0.1))
                 
                 HStack(spacing: 12) {
-                    // Approve Button
                     Button {
-                        print("DEBUG: Approve pressed for \(request.id ?? "unknown")")
                         onUpdateStatus(.approved)
                     } label: {
                         HStack {
@@ -256,12 +268,10 @@ private struct IncomingRequestCard: View {
                         .foregroundColor(.green)
                         .cornerRadius(12)
                     }
-                    .buttonStyle(.plain) 
+                    .buttonStyle(.plain)
                     .disabled(isUpdating)
                     
-                    // Reject Button
                     Button {
-                        print("DEBUG: Reject pressed for \(request.id ?? "unknown")")
                         onUpdateStatus(.rejected)
                     } label: {
                         Text("Reject")
@@ -271,12 +281,9 @@ private struct IncomingRequestCard: View {
                             .background(Color.white.opacity(0.05))
                             .foregroundColor(.white.opacity(0.8))
                             .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                            )
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
                     }
-                    .buttonStyle(.plain) // CRITICAL: Prevents tap bleeding
+                    .buttonStyle(.plain)
                     .disabled(isUpdating)
                 }
             }
@@ -284,30 +291,16 @@ private struct IncomingRequestCard: View {
         .padding(20)
         .background {
             RoundedRectangle(cornerRadius: 24)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.04)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(LinearGradient(colors: [Color.white.opacity(0.12), Color.white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing))
         }
         .overlay(
             RoundedRectangle(cornerRadius: 24)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [DriveBayTheme.glassBorder.opacity(0.5), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+                .strokeBorder(LinearGradient(colors: [DriveBayTheme.glassBorder.opacity(0.5), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
     }
 }
 
-// MARK: - Status Badge
 struct StatusBadge: View {
     let status: Booking.BookingStatus
     

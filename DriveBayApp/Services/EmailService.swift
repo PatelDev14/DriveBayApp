@@ -114,5 +114,36 @@ actor EmailService {
                 throw NSError(domain: "EmailError", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMsg])
             }
         }
+    
+    func sendReportNotificationEmail(reportType: String, reporterEmail: String, bookingAddress: String, description: String) async throws {
+        let url = URL(string: "https://api.resend.com/emails")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        
+        let body: [String: Any] = [
+            "from": fromEmail,
+            "to": "devp1400@gmail.com",
+            "subject": "New Report: \(reportType)",
+            "html": """
+            <h2>New Report Submitted</h2>
+            <p><strong>Type:</strong> \(reportType)</p>
+            <p><strong>Reporter:</strong> \(reporterEmail)</p>
+            <p><strong>Booking Address:</strong> \(bookingAddress)</p>
+            <hr>
+            <p><strong>Description:</strong></p>
+            <p>\(description.replacingOccurrences(of: "\n", with: "<br>"))</p>
+            <p>Please review in Firestore > reports collection.</p>
+            """
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw NSError(domain: "EmailError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to send admin notification"])
+        }
     }
+}
 
