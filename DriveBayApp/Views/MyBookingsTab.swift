@@ -1,3 +1,4 @@
+// Views/MyBookingsTab.swift
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
@@ -9,11 +10,12 @@ struct MyBookingsTab: View {
     @State private var isLoading = true
     @State private var bookingToDelete: Booking?
     @State private var showingDeleteAlert = false
+    @State private var bookingToReport: Booking?
+    @State private var showingReportForm = false
     
     var body: some View {
         NavigationStack {
             ZStack {
-                // High-end Background Consistency
                 AnimatedGradientBackground()
                     .ignoresSafeArea()
                 
@@ -26,10 +28,17 @@ struct MyBookingsTab: View {
                 } else {
                     List {
                         ForEach(bookings) { booking in
-                            BookingCard(booking: booking) {
-                                bookingToDelete = booking
-                                showingDeleteAlert = true
-                            }
+                            BookingCard(
+                                booking: booking,
+                                onDelete: {
+                                    bookingToDelete = booking
+                                    showingDeleteAlert = true
+                                },
+                                onReport: {
+                                    bookingToReport = booking
+                                    showingReportForm = true
+                                }
+                            )
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
@@ -41,36 +50,37 @@ struct MyBookingsTab: View {
             }
             .navigationTitle("My Bookings")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                            Text("Back")
-                        }
+                    Button("Back") { dismiss() }
                         .foregroundColor(.white.opacity(0.9))
-                        .fontWeight(.semibold)
-                    }
+                        .fontWeight(.medium)
                 }
             }
             .onAppear {
                 fetchMyBookings()
             }
             .alert("Remove from History?", isPresented: $showingDeleteAlert) {
-                    Button("Cancel", role: .cancel) { }
-                    Button("Remove", role: .destructive) {
-                        if let booking = bookingToDelete {
-                            deleteBooking(booking)
-                        }
+                Button("Cancel", role: .cancel) { }
+                Button("Remove", role: .destructive) {
+                    if let booking = bookingToDelete {
+                        deleteBooking(booking)
                     }
-                } message: {
-                    Text("This booking will be removed from your view, but will remain active if it is currently approved.")
                 }
+            } message: {
+                Text("This booking will be removed from your view, but will remain active if it is currently approved.")
+            }
+            .sheet(isPresented: $showingReportForm) {
+                if let booking = bookingToReport {
+                    ReportFormView(booking: booking, asRenter: true)
+                }
+            }
         }
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - Refined Empty State (Consistency with Requests)
+    // MARK: - Empty State
     private var emptyStateView: some View {
         VStack(spacing: 24) {
             ZStack {
@@ -82,11 +92,7 @@ struct MyBookingsTab: View {
                 Image(systemName: "ticket.fill")
                     .font(.system(size: 70))
                     .foregroundStyle(
-                        LinearGradient(
-                            colors: [DriveBayTheme.accent, .white],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        LinearGradient(colors: [DriveBayTheme.accent, .white], startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                     .shadow(color: DriveBayTheme.glow.opacity(0.5), radius: 20)
             }
@@ -106,37 +112,35 @@ struct MyBookingsTab: View {
         .padding(.top, 60)
     }
     
-    // MARK: - Logic
     private func fetchMyBookings() {
-            guard let uid = Auth.auth().currentUser?.uid else {
-                isLoading = false
-                return
-            }
-            
-            // Update: We only fetch bookings where hiddenByRenter is false
-            Firestore.firestore().collection("bookings")
-                .whereField("renterId", isEqualTo: uid)
-                .whereField("hiddenByRenter", isEqualTo: false)
-                .order(by: "createdAt", descending: true)
-                .addSnapshotListener { snapshot, error in
-                    isLoading = false
-                    if let error = error {
-                        print("Error fetching bookings: \(error.localizedDescription)")
-                        return
-                    }
-                    
-                    withAnimation {
-                        self.bookings = snapshot?.documents.compactMap { try? $0.data(as: Booking.self) } ?? []
-                    }
-                }
+        guard let uid = Auth.auth().currentUser?.uid else {
+            isLoading = false
+            return
         }
+        
+        Firestore.firestore().collection("bookings")
+            .whereField("renterId", isEqualTo: uid)
+            .whereField("hiddenByRenter", isEqualTo: false)
+            .order(by: "createdAt", descending: true)
+            .addSnapshotListener { snapshot, error in
+                isLoading = false
+                if let error = error {
+                    print("Error fetching bookings: \(error.localizedDescription)")
+                    return
+                }
+                
+                withAnimation {
+                    self.bookings = snapshot?.documents.compactMap { try? $0.data(as: Booking.self) } ?? []
+                }
+            }
+    }
     
     private func deleteBooking(_ booking: Booking) {
         guard let id = booking.id else { return }
         
         Firestore.firestore().collection("bookings").document(id).updateData([
             "hiddenByRenter": true,
-            "status": Booking.BookingStatus.cancelled.rawValue // Change status to free up the spot
+            "status": Booking.BookingStatus.cancelled.rawValue
         ]) { error in
             if let error = error {
                 print("Error: \(error.localizedDescription)")
@@ -145,14 +149,15 @@ struct MyBookingsTab: View {
     }
 }
 
-// MARK: - Beautiful Booking Card (Consistency with Requests)
+// MARK: - Booking Card (Renter side)
 private struct BookingCard: View {
     let booking: Booking
     let onDelete: () -> Void
+    let onReport: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header: Address & Styled Delete Button
+            // Header
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(booking.listingAddress)
@@ -173,7 +178,6 @@ private struct BookingCard: View {
                 
                 Spacer()
                 
-                // Matches the Delete Style from Requests Tab
                 Button(action: onDelete) {
                     Image(systemName: "trash.fill")
                         .font(.system(size: 16))
@@ -185,7 +189,7 @@ private struct BookingCard: View {
                 .buttonStyle(.plain)
             }
             
-            // Middle: Metadata & Status Badge
+            // Date & Time
             HStack {
                 HStack(spacing: 12) {
                     Label(booking.requestedDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
@@ -200,10 +204,19 @@ private struct BookingCard: View {
                 StatusBadge(status: booking.status)
             }
             
-            Divider()
-                .background(Color.white.opacity(0.1))
+            // Report Button (only for approved)
+            if booking.status == .approved {
+                Button("Report Issue with Driveway") {
+                    onReport()
+                }
+                .font(.subheadline.bold())
+                .foregroundColor(.red)
+                .padding(.top, 4)
+            }
             
-            // Footer: Total Price (Receipt Style)
+            Divider().background(Color.white.opacity(0.1))
+            
+            // Total Price
             HStack {
                 Text("Total Payment")
                     .font(.caption)
@@ -216,36 +229,19 @@ private struct BookingCard: View {
                 Text("$\(String(format: "%.2f", booking.totalPrice ?? 0.0))")
                     .font(.system(.title2, design: .rounded, weight: .heavy))
                     .foregroundStyle(
-                        LinearGradient(
-                            colors: [.green, .green.opacity(0.8)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+                        LinearGradient(colors: [.green, .green.opacity(0.8)], startPoint: .top, endPoint: .bottom)
                     )
             }
         }
         .padding(20)
         .background {
             RoundedRectangle(cornerRadius: 24)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.04)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(LinearGradient(colors: [Color.white.opacity(0.12), Color.white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing))
         }
         .overlay(
             RoundedRectangle(cornerRadius: 24)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [DriveBayTheme.glassBorder.opacity(0.5), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+                .strokeBorder(LinearGradient(colors: [DriveBayTheme.glassBorder.opacity(0.5), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+        .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
     }
 }

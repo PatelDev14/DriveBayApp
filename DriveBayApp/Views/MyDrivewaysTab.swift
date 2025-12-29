@@ -34,14 +34,9 @@ struct MyDrivewaysTab: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                            Text("Back")
-                        }
+                    Button("Back") { dismiss() }
                         .foregroundColor(.white.opacity(0.9))
                         .fontWeight(.semibold)
-                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
