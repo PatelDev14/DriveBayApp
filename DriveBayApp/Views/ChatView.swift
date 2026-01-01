@@ -29,7 +29,7 @@ enum ProfileTab {
 private enum SheetType: Identifiable {
     case booking(Listing)
     case profile
-    case dashboard(ProfileTab)   // 🔑 TAB IS PART OF IDENTITY
+    case dashboard(ProfileTab)
     
     var id: String {
         switch self {

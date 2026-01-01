@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct LoginView: View {
-    // 1. Access the shared Authentication Service
     @EnvironmentObject var authService: AuthService
     
     @State private var email: String = ""
@@ -21,10 +20,17 @@ struct LoginView: View {
                 VStack(spacing: 28) {
                     // Logo
                     VStack(spacing: 12) {
-                        Image(systemName: "car.2.fill")
-                            .font(.system(size: 64))
-                            .foregroundStyle(DriveBayTheme.accent)
-                            .shadow(color: DriveBayTheme.glow, radius: 20, y: 10)
+                        Image("DriveBay")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 110, height: 110)
+                                .background(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                        .stroke(DriveBayTheme.glow, lineWidth: 4)
+                                )
+                                .shadow(color: DriveBayTheme.glow, radius: 20, y: 10)
 
                         Text("DriveBay")
                             .font(.system(size: 48, weight: .black, design: .rounded))

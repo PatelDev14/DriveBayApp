@@ -157,7 +157,7 @@ private struct BookingCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header
+            // MARK: - Header (Address & Delete)
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(booking.listingAddress)
@@ -189,9 +189,9 @@ private struct BookingCard: View {
                 .buttonStyle(.plain)
             }
             
-            // Date & Time
+            // MARK: - Date, Time & Status
             HStack {
-                HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
                     Label(booking.requestedDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
                     Label("\(booking.startTime) – \(booking.endTime)", systemImage: "clock.fill")
                 }
@@ -204,33 +204,45 @@ private struct BookingCard: View {
                 StatusBadge(status: booking.status)
             }
             
-            // Report Button (only for approved)
-            if booking.status == .approved {
-                Button("Report Issue with Driveway") {
-                    onReport()
+            // MARK: - STRIPE PAYMENT BUTTON
+            // After StatusBadge and before Divider
+            if booking.status == .approved && booking.paymentStatus != "paid" {
+                NavigationLink(destination: PaymentView(booking: booking, totalAmount: booking.totalPrice ?? 25.00)) {
+                    HStack {
+                        Image(systemName: "creditcard.fill")
+                        Text("Complete Payment")
+                            .fontWeight(.bold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(DriveBayTheme.accent)
+                    .foregroundColor(.black)
+                    .cornerRadius(12)
+                    .shadow(color: DriveBayTheme.glow.opacity(0.3), radius: 10)
                 }
-                .font(.subheadline.bold())
-                .foregroundColor(.red)
-                .padding(.top, 4)
+            } else if booking.paymentStatus == "paid" {
+                Label("Paid Successfully", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.bold())
+                    .foregroundColor(.green)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(12)
             }
-            
+            // MARK: - Footer (Total Price)
             Divider().background(Color.white.opacity(0.1))
             
-            // Total Price
             HStack {
-                Text("Total Payment")
+                Text("Total Price")
                     .font(.caption)
                     .textCase(.uppercase)
-                    .tracking(1)
                     .foregroundColor(.white.opacity(0.4))
                 
                 Spacer()
                 
                 Text("$\(String(format: "%.2f", booking.totalPrice ?? 0.0))")
                     .font(.system(.title2, design: .rounded, weight: .heavy))
-                    .foregroundStyle(
-                        LinearGradient(colors: [.green, .green.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-                    )
+                    .foregroundColor(.green)
             }
         }
         .padding(20)
@@ -240,8 +252,7 @@ private struct BookingCard: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: 24)
-                .strokeBorder(LinearGradient(colors: [DriveBayTheme.glassBorder.opacity(0.5), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                .strokeBorder(DriveBayTheme.glassBorder.opacity(0.5), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
     }
 }
