@@ -33,3 +33,9 @@ functions/**
 !functions/index.js
 !functions/package.json
 !functions/package-lock.json
+
+
+.firebase/
+Firebase_backend/
+# Optional: Package.resolved if you don't want to commit it
+# Package.resolved
