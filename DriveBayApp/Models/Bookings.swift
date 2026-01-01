@@ -6,6 +6,7 @@ struct Booking: Identifiable, Codable {
     @DocumentID var id: String?
     let listingId: String
     let listingAddress: String
+    let country: String?
     let listingTitle: String
     let listingOwnerId: String
     
@@ -46,6 +47,7 @@ struct Booking: Identifiable, Codable {
         id: String? = nil,
         listingId: String,
         listingAddress: String,
+        country: String,
         listingTitle: String,
         listingOwnerId: String,
         renterId: String,
@@ -63,6 +65,7 @@ struct Booking: Identifiable, Codable {
         self.id = id
         self.listingId = listingId
         self.listingAddress = listingAddress
+        self.country = country
         self.listingTitle = listingTitle
         self.listingOwnerId = listingOwnerId
         self.renterId = renterId

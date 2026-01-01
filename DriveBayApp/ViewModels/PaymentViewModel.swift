@@ -18,17 +18,20 @@ class PaymentViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var paymentSucceeded = false
-    
+
     func preparePayment(for booking: Booking, totalAmount: Double) {
         isLoading = true
         errorMessage = nil
         
-        let amountCents = Int64(totalAmount * 100)
+        // 1. Determine currency based on the specific country field
+        // Assuming your booking object has a 'country' property
+        let country = booking.country?.lowercased() ?? "united states"
+        let selectedCurrency = (country == "canada") ? "cad" : "usd"
         
         let data: [String: Any] = [
-            "amount": amountCents,
+            "amount": totalAmount,
             "bookingId": booking.id ?? "unknown",
-            "currency": "usd",
+            "currency": selectedCurrency,
             "customerEmail": Auth.auth().currentUser?.email ?? ""
         ]
         
@@ -37,7 +40,6 @@ class PaymentViewModel: ObservableObject {
             
             DispatchQueue.main.async {
                 self.isLoading = false
-                
                 if let error = error {
                     self.errorMessage = "Setup failed: \(error.localizedDescription)"
                     return
@@ -52,7 +54,6 @@ class PaymentViewModel: ObservableObject {
                 var config = PaymentSheet.Configuration()
                 config.merchantDisplayName = "DriveBay"
                 config.style = .alwaysDark
-                config.primaryButtonColor = UIColor(DriveBayTheme.accent)
                 
                 let sheet = PaymentSheet(paymentIntentClientSecret: clientSecret, configuration: config)
                 self.paymentWrapper = PaymentSheetWrapper(sheet: sheet)
