@@ -144,10 +144,6 @@ struct BookingRequestView: View {
                         .foregroundColor(.white)
                 }
             }
-//            .onAppear {
-//                selectedDate = listing.date
-//                loadBookingsAndUpdateAvailability()
-//            }
             .onAppear {
                 loadBookingsAndUpdateAvailability()
             }
@@ -202,6 +198,7 @@ struct BookingRequestView: View {
         let newBooking = Booking(
             listingId: listing.id ?? "",
             listingAddress: listing.address,
+            country: listing.country,
             listingTitle: listing.address,
             listingOwnerId: listing.ownerId,
             renterId: user.uid,
