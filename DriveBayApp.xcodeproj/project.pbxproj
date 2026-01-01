@@ -14,6 +14,8 @@
 		D77A44562ED92FD80031C726 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = D77A44552ED92FD80031C726 /* FirebaseFirestore */; };
 		D77A44582ED92FD80031C726 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = D77A44572ED92FD80031C726 /* FirebaseFirestoreCombine-Community */; };
 		D7866DC92EDBD9F600E899E3 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = D7866DC82EDBD9F600E899E3 /* FirebaseAppCheck */; };
+		D7A2F66D2F06C995009B923F /* StripeApplePay in Frameworks */ = {isa = PBXBuildFile; productRef = D7A2F66C2F06C995009B923F /* StripeApplePay */; };
+		D7A2F66F2F06C995009B923F /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = D7A2F66E2F06C995009B923F /* StripePaymentSheet */; };
 		D7CDD11A2ED2982000F4F0FE /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = D7CDD1192ED2982000F4F0FE /* FirebaseAI */; };
 		D7CDD11C2ED2982000F4F0FE /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = D7CDD11B2ED2982000F4F0FE /* FirebaseAILogic */; };
 		D7CDD11E2ED2982000F4F0FE /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = D7CDD11D2ED2982000F4F0FE /* FirebaseAnalytics */; };
@@ -113,6 +115,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D7A2F66D2F06C995009B923F /* StripeApplePay in Frameworks */,
 				D7D3F8C12ED2A1B800C63381 /* FirebaseAppDistribution-Beta in Frameworks */,
 				D7DAC3A72ED35E3C00905E69 /* FirebaseAppCheck in Frameworks */,
 				D7D3F8DD2ED2A1B800C63381 /* FirebasePerformance in Frameworks */,
@@ -120,6 +123,7 @@
 				D7866DC92EDBD9F600E899E3 /* FirebaseAppCheck in Frameworks */,
 				D7D3F8C32ED2A1B800C63381 /* FirebaseAuth in Frameworks */,
 				D77A44562ED92FD80031C726 /* FirebaseFirestore in Frameworks */,
+				D7A2F66F2F06C995009B923F /* StripePaymentSheet in Frameworks */,
 				D7D3F8D12ED2A1B800C63381 /* FirebaseFunctions in Frameworks */,
 				D7D3F8B72ED2A1B800C63381 /* FirebaseAILogic in Frameworks */,
 				D7DAC39D2ED35E3C00905E69 /* FirebaseAI in Frameworks */,
@@ -252,6 +256,7 @@
 				D75D33232ED24099002E3848 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				D7CDD1182ED2982000F4F0FE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				D77A444C2ED923360031C726 /* XCRemoteSwiftPackageReference "generative-ai-swift" */,
+				D7A2F66B2F06C995009B923F /* XCRemoteSwiftPackageReference "stripe-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D76E5B9F2ED2296D00318A79;
@@ -515,6 +520,14 @@
 				minimumVersion = 0.5.6;
 			};
 		};
+		D7A2F66B2F06C995009B923F /* XCRemoteSwiftPackageReference "stripe-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stripe/stripe-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 25.3.1;
+			};
+		};
 		D7CDD1182ED2982000F4F0FE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -560,6 +573,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D7CDD1182ED2982000F4F0FE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAppCheck;
+		};
+		D7A2F66C2F06C995009B923F /* StripeApplePay */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D7A2F66B2F06C995009B923F /* XCRemoteSwiftPackageReference "stripe-ios" */;
+			productName = StripeApplePay;
+		};
+		D7A2F66E2F06C995009B923F /* StripePaymentSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D7A2F66B2F06C995009B923F /* XCRemoteSwiftPackageReference "stripe-ios" */;
+			productName = StripePaymentSheet;
 		};
 		D7CDD1192ED2982000F4F0FE /* FirebaseAI */ = {
 			isa = XCSwiftPackageProductDependency;
