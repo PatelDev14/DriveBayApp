@@ -17,6 +17,7 @@ struct Booking: Identifiable, Codable {
     let ownerEmail: String?
     let totalPrice: Double?
     let status: BookingStatus
+    var paymentStatus: String?
     
     let requestedDate: Date
     let startTime: String

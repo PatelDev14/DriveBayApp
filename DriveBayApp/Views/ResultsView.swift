@@ -9,6 +9,7 @@ struct ResultsView: View {
     @State private var maxPrice: Double = 100.0
     @State private var selectedCity: String = "All"
     @State private var showingFilterSheet = false
+    @Environment(\.dismiss) private var dismiss
 
     // MARK: - Logic
     var availableCities: [String] {
@@ -100,7 +101,20 @@ struct ResultsView: View {
                 }
             }
         }
+
         .navigationTitle("Find a Spot")
+        .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(true)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Back") {
+                    dismiss()
+                }
+                .foregroundColor(.white.opacity(0.9))
+                .fontWeight(.semibold)
+            }
+        }
         .sheet(isPresented: $showingFilterSheet) {
             FilterSheetView(
                 maxPrice: $maxPrice,

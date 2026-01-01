@@ -26,3 +26,10 @@ firebase-debug.log
 firebug-debug.log
 firestore-debug.log
 ui-debug.log
+
+
+# Ignore all in functions except source code
+functions/**
+!functions/index.js
+!functions/package.json
+!functions/package-lock.json

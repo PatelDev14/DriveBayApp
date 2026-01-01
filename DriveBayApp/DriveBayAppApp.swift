@@ -1,11 +1,11 @@
+// DriveBayApp.swift
 import SwiftUI
 import FirebaseCore
 import FirebaseAppCheck
-// MARK: - App Configuration
+import StripePaymentSheet
 
-// Real placeholder listings (auto ID thanks to your Listing init in DataModels.swift)
-private let placeholderListings: [Listing] = [
-]
+// MARK: - App Configuration
+private let placeholderListings: [Listing] = []
 
 @main
 struct DriveBayAppApp: App {
@@ -20,33 +20,29 @@ struct DriveBayAppApp: App {
         AppCheck.setAppCheckProviderFactory(providerFactory)
         #endif
         
-        // 2. Define the static booking handler for the ViewModel
-        let bookingHandler: (Listing, Date, Date) async throws -> Void = { listing, start, end in
-            print("Booking requested for \(listing.address) from \(start) to \(end)")
+        // 2. Set Stripe Publishable Key from Info.plist
+        if let publishableKey = Bundle.main.object(forInfoDictionaryKey: "StripePublishableKey") as? String {
+            StripeAPI.defaultPublishableKey = publishableKey
+            print("Stripe publishable key loaded successfully")
+        } else {
+            print("WARNING: StripePublishableKey not found in Info.plist")
         }
         
-        // 3. Initialize the StateObject wrapper with the configured ViewModel
         _chatViewModel = StateObject(wrappedValue: ChatViewModel())
     }
 
     var body: some Scene {
         WindowGroup {
-            // Use the authentication state to switch between views
             if authService.isLoggedIn {
-                ChatView(
-                    //chatViewModel: chatViewModel,
-                    // Sign-out logic handles the async call safely
-                    onLogout: {
-                        Task {
-                            do {
-                                try authService.signOut()
-                            } catch {
-                                // Provide user feedback on sign-out failure
-                                print("Sign out failed: \(error)")
-                            }
+                ChatView(onLogout: {
+                    Task {
+                        do {
+                            try authService.signOut()
+                        } catch {
+                            print("Sign out failed: \(error)")
                         }
                     }
-                )
+                })
                 .environmentObject(authService)
             } else {
                 LoginView()
