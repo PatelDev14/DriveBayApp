@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D74DC13C2F0612F200AE16D8 /* StripeApplePay in Frameworks */ = {isa = PBXBuildFile; productRef = D74DC13B2F0612F200AE16D8 /* StripeApplePay */; };
-		D74DC13E2F0612F200AE16D8 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = D74DC13D2F0612F200AE16D8 /* StripePaymentSheet */; };
 		D75D33252ED24099002E3848 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = D75D33242ED24099002E3848 /* GoogleSignIn */; };
 		D75D33272ED24099002E3848 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D75D33262ED24099002E3848 /* GoogleSignInSwift */; };
 		D77A444E2ED923360031C726 /* GoogleGenerativeAI in Frameworks */ = {isa = PBXBuildFile; productRef = D77A444D2ED923360031C726 /* GoogleGenerativeAI */; };
@@ -115,7 +113,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D74DC13C2F0612F200AE16D8 /* StripeApplePay in Frameworks */,
 				D7D3F8C12ED2A1B800C63381 /* FirebaseAppDistribution-Beta in Frameworks */,
 				D7DAC3A72ED35E3C00905E69 /* FirebaseAppCheck in Frameworks */,
 				D7D3F8DD2ED2A1B800C63381 /* FirebasePerformance in Frameworks */,
@@ -123,7 +120,6 @@
 				D7866DC92EDBD9F600E899E3 /* FirebaseAppCheck in Frameworks */,
 				D7D3F8C32ED2A1B800C63381 /* FirebaseAuth in Frameworks */,
 				D77A44562ED92FD80031C726 /* FirebaseFirestore in Frameworks */,
-				D74DC13E2F0612F200AE16D8 /* StripePaymentSheet in Frameworks */,
 				D7D3F8D12ED2A1B800C63381 /* FirebaseFunctions in Frameworks */,
 				D7D3F8B72ED2A1B800C63381 /* FirebaseAILogic in Frameworks */,
 				D7DAC39D2ED35E3C00905E69 /* FirebaseAI in Frameworks */,
@@ -256,7 +252,6 @@
 				D75D33232ED24099002E3848 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				D7CDD1182ED2982000F4F0FE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				D77A444C2ED923360031C726 /* XCRemoteSwiftPackageReference "generative-ai-swift" */,
-				D74DC13A2F0612F200AE16D8 /* XCRemoteSwiftPackageReference "stripe-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D76E5B9F2ED2296D00318A79;
@@ -420,7 +415,7 @@
 				CODE_SIGN_ENTITLEMENTS = DriveBayApp/DriveBayApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = ARY55MH724;
+				DEVELOPMENT_TEAM = 8TJB8JGSK5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DriveBayApp/Info.plist;
@@ -454,7 +449,7 @@
 				CODE_SIGN_ENTITLEMENTS = DriveBayApp/DriveBayApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = ARY55MH724;
+				DEVELOPMENT_TEAM = 8TJB8JGSK5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DriveBayApp/Info.plist;
@@ -504,14 +499,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		D74DC13A2F0612F200AE16D8 /* XCRemoteSwiftPackageReference "stripe-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/stripe/stripe-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 25.3.1;
-			};
-		};
 		D75D33232ED24099002E3848 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
@@ -539,16 +526,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		D74DC13B2F0612F200AE16D8 /* StripeApplePay */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D74DC13A2F0612F200AE16D8 /* XCRemoteSwiftPackageReference "stripe-ios" */;
-			productName = StripeApplePay;
-		};
-		D74DC13D2F0612F200AE16D8 /* StripePaymentSheet */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D74DC13A2F0612F200AE16D8 /* XCRemoteSwiftPackageReference "stripe-ios" */;
-			productName = StripePaymentSheet;
-		};
 		D75D33242ED24099002E3848 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D75D33232ED24099002E3848 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
