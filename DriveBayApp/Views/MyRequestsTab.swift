@@ -242,13 +242,22 @@ private struct IncomingRequestCard: View {
             
             // Report Renter Button (only for approved)
             if request.status == .approved {
-                Button("Report Renter") {
-                    onReport()
+                    Button(action: {
+                        onReport()
+                    }) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                            Text("Report Renter")
+                        }
+                        .font(.subheadline.bold())
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(10)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .font(.subheadline.bold())
-                .foregroundColor(.red)
-                .padding(.top, 4)
-            }
             
             if request.status == .pending {
                 Divider().background(Color.white.opacity(0.1))

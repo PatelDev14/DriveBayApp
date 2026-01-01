@@ -140,7 +140,7 @@ struct ReportFormView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Back") { dismiss() }
                         .foregroundColor(.white.opacity(0.9))
                         .fontWeight(.medium)
                 }

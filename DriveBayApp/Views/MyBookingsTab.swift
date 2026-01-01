@@ -203,31 +203,53 @@ private struct BookingCard: View {
                 
                 StatusBadge(status: booking.status)
             }
-            
-            // MARK: - STRIPE PAYMENT BUTTON
-            // After StatusBadge and before Divider
-            if booking.status == .approved && booking.paymentStatus != "paid" {
-                NavigationLink(destination: PaymentView(booking: booking, totalAmount: booking.totalPrice ?? 25.00)) {
-                    HStack {
-                        Image(systemName: "creditcard.fill")
-                        Text("Complete Payment")
-                            .fontWeight(.bold)
+
+            // MARK: - STRIPE PAYMENT BUTTON + REPORT
+            VStack(spacing: 12) {
+                // 1. Report Issue Button
+                if booking.status == .approved {
+                    Button(action: {
+                        onReport()
+                    }) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                            Text("Report Issue with Driveway")
+                        }
+                        .font(.subheadline.bold())
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(10)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(DriveBayTheme.accent)
-                    .foregroundColor(.black)
-                    .cornerRadius(12)
-                    .shadow(color: DriveBayTheme.glow.opacity(0.3), radius: 10)
+                    .buttonStyle(PlainButtonStyle())
                 }
-            } else if booking.paymentStatus == "paid" {
-                Label("Paid Successfully", systemImage: "checkmark.circle.fill")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.green)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(12)
+
+                // 2. Complete Payment Button (Bottom position)
+                if booking.status == .approved && booking.paymentStatus != "paid" {
+                    NavigationLink(destination: PaymentView(booking: booking, totalAmount: booking.totalPrice ?? 25.00)) {
+                        HStack {
+                            Image(systemName: "creditcard.fill")
+                            Text("Complete Payment")
+                                .fontWeight(.bold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(DriveBayTheme.accent)
+                        .foregroundColor(.black)
+                        .cornerRadius(12)
+                        .shadow(color: DriveBayTheme.glow.opacity(0.3), radius: 10)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else if booking.paymentStatus == "paid" {
+                    Label("Paid Successfully", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.green)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(12)
+                }
             }
             // MARK: - Footer (Total Price)
             Divider().background(Color.white.opacity(0.1))
