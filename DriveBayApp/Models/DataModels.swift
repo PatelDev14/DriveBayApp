@@ -2,7 +2,6 @@
 import Foundation
 import SwiftUI
 import FirebaseFirestore
-// ... (Your existing code: Listing, ParkingLocation, ParkingResults, ChatMessage, ChatRole, PermissionState)
 
 // MARK: - 3. Gemini Response Types (For Structured Email Output)
 
@@ -19,16 +18,6 @@ struct ConfirmationEmailsResponse: Codable {
     let ownerSubject: String
     let ownerEmailContent: String
 }
-
-// ⚠️ Note on ParkingResults: Your existing ParkingResults struct is correct.
-/*
-struct ParkingResults: Decodable {
-    let marketplaceResults: [ParkingLocation]
-    let webResults: [ParkingLocation]
-}
-*/
-// However, to strictly match the previous Swift response, we should use the specific structs
-// defined for the output, even if they are structurally similar to ParkingLocation.
 
 struct ParkingMarketplaceResult: Codable {
     let listingId: String
@@ -49,6 +38,3 @@ struct GeminiParkingResponse: Codable {
     let marketplaceResults: [ParkingMarketplaceResult]
     let webResults: [ParkingWebResult]
 }
-
-// Suggestion: Since your existing `ParkingResults` and `ParkingLocation` are simpler,
-// I recommend leaving them as is for your UI and using `GeminiParkingResponse` for the API.

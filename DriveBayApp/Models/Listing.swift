@@ -76,13 +76,12 @@ struct Listing: Identifiable, Codable {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        return formatter.string(from: date)  // using your existing `date: Date` field
+        return formatter.string(from: date)
     }
 }
 
 struct AnimatedGradientBackground: View {
     var body: some View {
-        // Use a solid color placeholder for simplicity
         Color.black
     }
 }

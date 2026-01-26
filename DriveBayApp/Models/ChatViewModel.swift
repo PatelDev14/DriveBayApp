@@ -45,7 +45,6 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
                     // 1. Attempt to decode the document data into a Listing
                     // NOTE: This requires all Listing fields to be present/optional in Firestore.
                     guard var listing = try? doc.data(as: Listing.self) else { return nil }
-                    
                     // 2. Manually set the ID from the Firestore document ID
                     listing.id = doc.documentID
                     return listing
@@ -118,7 +117,6 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
             
         } catch {
             cleanedResponse = "Sorry, I'm having trouble connecting right now."
-            // We skip all filtering if the network call fails
         }
 
         // --- 4. Local Keyword Fallback (Priority 2: Only if Token failed or yielded zero) ---
@@ -220,7 +218,6 @@ class ChatViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
                 // Fetch listings. We pass 'realListings' so MapKitManager can check distances.
                 var nearby = try await mapKitManager.fetchNearbyListings(
                     from: location,
-//                    maxDistanceKm: 10.0
                 )
                 nearby.sort { ($0.distanceFromUser ?? Double.greatestFiniteMagnitude) < ($1.distanceFromUser ?? Double.greatestFiniteMagnitude) }
 

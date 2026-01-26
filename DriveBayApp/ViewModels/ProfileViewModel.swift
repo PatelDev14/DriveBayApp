@@ -4,6 +4,7 @@ import FirebaseAuth
 import FirebaseFirestore
 import Combine
 import FirebaseStorage
+import FirebaseFunctions
 
 @MainActor
 class ProfileViewModel: ObservableObject {
@@ -17,8 +18,13 @@ class ProfileViewModel: ObservableObject {
     @Published var showError = false
     @Published var errorMessage: String?
     @Published var profileImageUrl: String? = nil
+    @Published var stripeAccountId: String? = nil
+    @Published var isLoading = false
+    @Published var isStripeVerified = false
+    @Published var isLoadingStripe = true
     
     private let db = Firestore.firestore()
+    private let functions = Functions.functions()
     
     var displayName: String {
         if !firstName.isEmpty && !lastName.isEmpty {
@@ -48,6 +54,11 @@ class ProfileViewModel: ObservableObject {
                 self?.firstName = data["firstName"] as? String ?? ""
                 self?.lastName = data["lastName"] as? String ?? ""
                 self?.phoneNumber = data["phoneNumber"] as? String ?? ""
+                self?.stripeAccountId = data["stripeAccountId"] as? String
+                
+                if let id = self?.stripeAccountId, !id.isEmpty {
+                                    self?.fetchStripeStatus()
+                                }
                 
                 if let urlString = data["photoURL"] as? String, !urlString.isEmpty {
                     self?.profileImageUrl = urlString
@@ -58,6 +69,39 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
+    func fetchStripeStatus() {
+        guard let id = stripeAccountId, !id.isEmpty else { return }
+        
+        // 1. Match your backend function name exactly: "getStripeAccountStatus"
+        functions.httpsCallable("getStripeAccountStatus").call(["stripeAccountId": id]) { [weak self] result, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Stripe Status Error: \(error.localizedDescription)")
+                    return
+                }
+
+                if let data = result?.data as? [String: Any] {
+                    // 2. Match your backend key name: "isEnabled"
+                    // Also check "detailsSubmitted" as a backup
+                    let verified = data["isEnabled"] as? Bool ?? false
+                    let detailsSubmitted = data["detailsSubmitted"] as? Bool ?? false
+                    
+                    // We consider them "Verified" if they've at least submitted their details
+                    self?.isStripeVerified = verified || detailsSubmitted
+                    
+                    print("Stripe Sync - Enabled: \(verified), Submitted: \(detailsSubmitted)")
+                    
+                    // If they are still not verified, retry in 5 seconds
+                    if !(verified || detailsSubmitted) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                            self?.fetchStripeStatus()
+                        }
+                    }
+                }
+            }
+        }
+    }
+ 
     func saveProfile() {
         guard let user = Auth.auth().currentUser else { return }
         isSaving = true
