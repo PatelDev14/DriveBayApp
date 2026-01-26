@@ -3,7 +3,7 @@ import FirebaseFunctions
 
 actor EmailService {
     private let functions = Functions.functions()
-    private let fromEmail: String = "no-reply@dev-patel.ca"
+    private let fromEmail: String = "contact@drivebay.ca"
     
     // Internal helper to call the cloud function to avoid repeating code
     private func sendCloudEmail(to: Any, subject: String, html: String) async throws {

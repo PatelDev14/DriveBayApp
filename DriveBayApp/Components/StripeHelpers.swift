@@ -7,7 +7,7 @@ struct PaymentSheetView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIViewController {
         let vc = UIViewController()
-        vc.view.backgroundColor = .clear // Make the background transparent
+        vc.view.backgroundColor = .clear
         return vc
     }
 

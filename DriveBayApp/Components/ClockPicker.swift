@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ClockPicker: View {
     let title: String
-    @Binding var selection: String  // "HH:mm" format
+    @Binding var selection: String
 
     @State private var showingPicker = false
 
@@ -132,9 +132,9 @@ struct ClockPicker: View {
 
 #Preview {
     VStack(spacing: 30) {
-        ClockPicker(title: "Start Time", selection: .constant(""))     // → –– : –– (blurred)
-        ClockPicker(title: "End Time", selection: .constant("17:30"))  // → 17:30 (sharp)
-        ClockPicker(title: "Test", selection: .constant("23:45"))      // → 23:45 (sharp)
+        ClockPicker(title: "Start Time", selection: .constant(""))
+        ClockPicker(title: "End Time", selection: .constant("17:30"))
+        ClockPicker(title: "Test", selection: .constant("23:45"))
     }
     .padding()
     .background(Color.black)

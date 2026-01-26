@@ -1,11 +1,3 @@
-//
-//  GeminiResponseModels.swift
-//  DriveBayApp
-//
-//  Created by Dev Patel on 2025-11-27.
-//
-// GeminiResponseModels.swift
-
 import Foundation
 
 // Mirrors the main response object from the Gemini API

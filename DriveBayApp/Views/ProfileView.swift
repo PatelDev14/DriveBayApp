@@ -2,9 +2,12 @@
 import SwiftUI
 import FirebaseAuth
 import PhotosUI
+import FirebaseFirestore
+import FirebaseFunctions
 
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) var scenePhase
     @EnvironmentObject var authService: AuthService
     @StateObject private var viewModel = ProfileViewModel()
     @State private var isEditing = false
@@ -36,18 +39,20 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "chevron.left")
-                            Text("Back")
-                        }
-                        .foregroundColor(.white.opacity(0.7))
-                    }
+                    Button("Back") { dismiss() }
+                        .foregroundColor(.white.opacity(0.9))
+                        .fontWeight(.semibold)
                 }
             }
             .onChange(of: selectedPhoto) { handlePhotoSelection($0) }
+            // MODIFIER 2: App Phase (Safari return check)
+                        .onChange(of: scenePhase) { _, newPhase in
+                            if newPhase == .active {
+                                if let stripeID = viewModel.stripeAccountId, !stripeID.isEmpty {
+                                    viewModel.fetchStripeStatus()
+                                }
+                            }
+                        }
             .onAppear { onAppearSetup() }
             .alert("Delete Profile?", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -216,6 +221,96 @@ struct ProfileView: View {
             .cornerRadius(24)
             .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.1), lineWidth: 1))
             
+            // MARK: - Stripe Payout Section
+            VStack(spacing: 12) {
+                profileSectionLabel("PAYOUT SETTINGS")
+                
+                if let stripeID = viewModel.stripeAccountId, !stripeID.isEmpty {
+                    if viewModel.isStripeVerified {
+                        // STATE 1: TRULY VERIFIED
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundColor(.green)
+                                Text("Payouts Enabled")
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text("Stripe Connected")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.5))
+                            }
+                            .padding()
+                            .background(Color.green.opacity(0.1))
+                            .cornerRadius(16)
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.green.opacity(0.3), lineWidth: 1))
+                            
+                            // Allow them to edit/manage bank info
+                            Button {
+                                startStripeOnboarding()
+                            } label: {
+                                Text("Manage Payout Method")
+                                    .font(.caption.bold())
+                                    .foregroundColor(DriveBayTheme.accent)
+                                    .padding(.leading, 4)
+                            }
+                        }
+                    } else {
+                        // STATE 2: STARTED BUT NOT FINISHED
+                        VStack(spacing: 12) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                VStack(alignment: .leading) {
+                                    Text("Setup Incomplete")
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(.white)
+                                    Text("Finish adding info to receive payments")
+                                        .font(.caption2)
+                                        .foregroundColor(.white.opacity(0.6))
+                                }
+                                Spacer()
+                            }
+                            .padding()
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(16)
+                            
+                            Button {
+                                startStripeOnboarding()
+                            } label: {
+                                Text("Continue Registration")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(DriveBayTheme.accent)
+                                    .foregroundColor(.black)
+                                    .cornerRadius(12)
+                            }
+                        }
+                    }
+                } else {
+                    // STATE 3: NOT STARTED AT ALL
+                    Button {
+                        startStripeOnboarding()
+                    } label: {
+                        HStack {
+                            Image(systemName: "creditcard.and.123")
+                            Text("Setup Payouts to Earn")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(DriveBayTheme.accent)
+                        .foregroundColor(.black)
+                        .cornerRadius(16)
+                        .shadow(color: DriveBayTheme.glow.opacity(0.4), radius: 10, y: 5)
+                    }
+                    .disabled(viewModel.isLoading)
+                    .overlay(viewModel.isLoading ? ProgressView().tint(.black) : nil)
+                }
+            }
+            .padding(.bottom, 10)
+            
             VStack(spacing: 16) {
                 Button {
                     withAnimation(.spring()) { isEditing = true }
@@ -273,6 +368,9 @@ struct ProfileView: View {
     
     private func onAppearSetup() {
         viewModel.loadProfile()
+        if let stripeID = viewModel.stripeAccountId, !stripeID.isEmpty {
+                viewModel.fetchStripeStatus()
+            }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             if viewModel.firstName.isEmpty && viewModel.lastName.isEmpty {
                 withAnimation { isEditing = true }
@@ -316,6 +414,36 @@ struct ProfileView: View {
             Spacer()
         }
     }
+    func startStripeOnboarding() {
+        viewModel.isLoading = true
+        
+        Functions.functions().httpsCallable("createStripeAccountLink").call { result, error in
+            if let error = error {
+                print("Stripe Link Error: \(error.localizedDescription)")
+                viewModel.isLoading = false
+                return
+            }
+            
+            if let data = result?.data as? [String: Any],
+               let urlString = data["url"] as? String,
+               let stripeID = data["stripeAccountId"] as? String,
+               let url = URL(string: urlString) {
+                
+                // 1. Update Firestore so we remember this ID
+                let uid = Auth.auth().currentUser?.uid ?? ""
+                Firestore.firestore().collection("users").document(uid).updateData([
+                    "stripeAccountId": stripeID
+                ])
+                
+                // 2. Refresh local view model
+                viewModel.stripeAccountId = stripeID
+                
+                // 3. Open the onboarding page
+                UIApplication.shared.open(url)
+            }
+            viewModel.isLoading = false
+        }
+    }
 }
 
 // === STYLED TEXTFIELD ===
@@ -343,3 +471,4 @@ private struct GlassTextField: View {
             .accentColor(DriveBayTheme.accent)
     }
 }
+

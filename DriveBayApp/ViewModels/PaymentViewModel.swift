@@ -23,40 +23,55 @@ class PaymentViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        // 1. Determine currency based on the specific country field
-        // Assuming your booking object has a 'country' property
-        let country = booking.country?.lowercased() ?? "united states"
-        let selectedCurrency = (country == "canada") ? "cad" : "usd"
-        
-        let data: [String: Any] = [
-            "amount": totalAmount,
-            "bookingId": booking.id ?? "unknown",
-            "currency": selectedCurrency,
-            "customerEmail": Auth.auth().currentUser?.email ?? ""
-        ]
-        
-        Functions.functions().httpsCallable("createPaymentIntent").call(data) { [weak self] result, error in
-            guard let self = self else { return }
-            
-            DispatchQueue.main.async {
+        Task {
+            do {
+                // 1. Fetch Host's Stripe ID
+                let snapshot = try await Firestore.firestore()
+                    .collection("users")
+                    .document(booking.listingOwnerId)
+                    .getDocument()
+                
+                let hostStripeID = snapshot.data()?["stripeAccountId"] as? String
+                
+                // 2. Safety Check: If host hasn't set up Stripe, stop here
+                guard let destinationID = hostStripeID, !destinationID.isEmpty else {
+                    self.isLoading = false
+                    self.errorMessage = "This host hasn't set up their payouts yet."
+                    return
+                }
+                
+                let country = booking.country?.lowercased() ?? "united states"
+                let selectedCurrency = (country == "canada") ? "cad" : "usd"
+                
+                let data: [String: Any] = [
+                    "amount": totalAmount,
+                    "bookingId": booking.id ?? "unknown",
+                    "currency": selectedCurrency,
+                    "customerEmail": Auth.auth().currentUser?.email ?? "",
+                    "destinationAccount": destinationID
+                ]
+                
+                // 3. Call the Cloud Function
+                let result = try await Functions.functions()
+                    .httpsCallable("createPaymentIntent")
+                    .call(data)
+                
+                // 4. Handle result on the Main Thread
+                if let resultData = result.data as? [String: Any],
+                   let clientSecret = resultData["clientSecret"] as? String {
+                    
+                    var config = PaymentSheet.Configuration()
+                    config.merchantDisplayName = "DriveBay"
+                    config.style = .alwaysDark
+                    
+                    self.paymentWrapper = PaymentSheetWrapper(sheet: PaymentSheet(paymentIntentClientSecret: clientSecret, configuration: config))
+                }
+                
                 self.isLoading = false
-                if let error = error {
-                    self.errorMessage = "Setup failed: \(error.localizedDescription)"
-                    return
-                }
                 
-                guard let data = result?.data as? [String: Any],
-                      let clientSecret = data["clientSecret"] as? String else {
-                    self.errorMessage = "Invalid response from server."
-                    return
-                }
-                
-                var config = PaymentSheet.Configuration()
-                config.merchantDisplayName = "DriveBay"
-                config.style = .alwaysDark
-                
-                let sheet = PaymentSheet(paymentIntentClientSecret: clientSecret, configuration: config)
-                self.paymentWrapper = PaymentSheetWrapper(sheet: sheet)
+            } catch {
+                self.isLoading = false
+                self.errorMessage = "Setup failed: \(error.localizedDescription)"
             }
         }
     }

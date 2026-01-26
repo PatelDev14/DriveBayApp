@@ -14,15 +14,12 @@ import FirebaseStorage
 // MARK: - AuthService
 
 class AuthService: ObservableObject {
-    
-    // @Published var isLoggedIn is correctly initialized and observed in init()
+
     @Published var isLoggedIn: Bool = Auth.auth().currentUser != nil
     
-    // Nonce storage for Sign In with Apple security
     private var currentNonce: String?
     
     init() {
-        // ⭐️ BEST PRACTICE: Auth State Listener is the single source of truth for isLoggedIn ⭐️
         Auth.auth().addStateDidChangeListener { [weak self] _, user in
             DispatchQueue.main.async {
                 //self.isLoggedIn = true
@@ -32,7 +29,6 @@ class AuthService: ObservableObject {
     }
     
     // MARK: - Email and Password
-    
     func signUp(email: String, password: String) async throws {
         let _ = try await Auth.auth().createUser(withEmail: email, password: password)
     }
@@ -42,9 +38,7 @@ class AuthService: ObservableObject {
     }
     
     func signOut() throws {
-        // Sign out of Google session first
         GIDSignIn.sharedInstance.signOut()
-        // Then sign out of Firebase (which triggers the listener and updates isLoggedIn)
         try Auth.auth().signOut()
     }
 
@@ -52,12 +46,7 @@ class AuthService: ObservableObject {
         try await Auth.auth().sendPasswordReset(withEmail: email)
     }
     
-    // ❌ REMOVED: handleSuccessfulSignIn(user: User). The init() listener handles this automatically and reliably. ❌
-    
-    // --- MARK: Social Sign In Implementations ---
-    
     // MARK: - Sign in with Apple
-        
     func signInWithApple() async throws {
         let nonce = randomNonceString()
         currentNonce = nonce
@@ -88,8 +77,7 @@ class AuthService: ObservableObject {
         currentNonce = nil
     }
         
-    // MARK: - Sign in with Google 🌐
-        
+    // MARK: - Sign in with Google
     func signInWithGoogle() async throws {
         guard let clientID = FirebaseApp.app()?.options.clientID else {
             throw AuthError.general("Google Client ID not found. Check GoogleService-Info.plist setup.")
@@ -101,7 +89,6 @@ class AuthService: ObservableObject {
             throw AuthError.general("Unable to find application root view controller.")
         }
         
-        // ⭐️ Standard Sign-In API with presenting view controller ⭐️
         let signInResult = try await GIDSignIn.sharedInstance.signIn(
             withPresenting: rootVC
         )
@@ -125,7 +112,6 @@ class AuthService: ObservableObject {
     
     
     // --- MARK: Utility Functions for Apple Sign In ---
-    
     private func randomNonceString(length: Int = 32) -> String {
         precondition(length > 0)
         var randomBytes = [UInt8](repeating: 0, count: length)
@@ -194,7 +180,6 @@ class AuthService: ObservableObject {
 
 
 // MARK: - ASAuthorizationControllerDelegate Helper (Remains correct)
-
 class ASDelegateHandler: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     
     private var continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>?
@@ -233,7 +218,6 @@ class ASDelegateHandler: NSObject, ASAuthorizationControllerDelegate, ASAuthoriz
 }
 
 // MARK: - Custom Error (Remains correct)
-
 enum AuthError: Error {
     case general(String)
     

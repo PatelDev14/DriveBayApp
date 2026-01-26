@@ -122,13 +122,10 @@ struct PaymentView: View {
             }
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {  // ← This gives the standard "X"
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.white.opacity(0.8))
-                            .symbolRenderingMode(.hierarchical)
-                    }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Back") { dismiss() }
+                        .foregroundColor(.white.opacity(0.9))
+                        .fontWeight(.semibold)
                 }
             }
             .navigationBarTitle("", displayMode: .inline)  // Hides title completely
