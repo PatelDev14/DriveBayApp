@@ -94,7 +94,7 @@ struct ChatView: View {
                     DashboardHostView(selectedTab: tab)
                 }
             }
-            .fullScreenCover(isPresented: $showingSearch) {
+            .sheet(isPresented: $showingSearch) {
                 DrivewaysSearchView()
             }
         }
@@ -138,35 +138,96 @@ struct ChatView: View {
         .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
     }
     
+//    private var userMenu: some View {
+//        Menu {
+//            Button {
+//                activeSheet = .profile
+//            } label: {
+//                Label("Profile", systemImage: "person.circle.fill")
+//            }
+//            Divider()
+//            Button("Logout", systemImage: "arrow.right.square") { onLogout() }
+//        } label: {
+//            ZStack {
+//                Circle()
+//                    .fill(.ultraThinMaterial)
+//                    .frame(width: 44, height: 44)
+//                    .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+//                
+//                Circle()
+//                    .stroke(DriveBayTheme.glow.opacity(0.6), lineWidth: 1)
+//                    .frame(width: 44, height: 44)
+//                    .blur(radius: 5)
+//                
+//                Image(systemName: "person.circle.fill")
+//                    .font(.title2)
+//                    .foregroundColor(DriveBayTheme.accent)
+//            }
+//        }
+//        .padding(.trailing, 15)
+//    }
+    
+//    private var userMenu: some View {
+//        Button {
+//            activeSheet = .profile
+//        } label: {
+//            ZStack {
+//                // Pulsing glow background (subtle animation)
+//                Circle()
+//                    .fill(DriveBayTheme.accent.opacity(0.12))
+//                    .frame(width: 52, height: 52)
+//                    .blur(radius: 12)
+//                    .scaleEffect(1.1 + 0.05 * sin(Date().timeIntervalSince1970 * 3))  // gentle pulse
+//                
+//                // Main glass circle
+//                Circle()
+//                    .fill(.ultraThinMaterial)
+//                    .frame(width: 44, height: 44)
+//                    .overlay(
+//                        Circle()
+//                            .stroke(DriveBayTheme.glow.opacity(0.7), lineWidth: 1.5)
+//                    )
+//                    .shadow(color: DriveBayTheme.glow.opacity(0.5), radius: 10, y: 4)
+//                
+//                // Icon with slight scale on press (built-in via Button)
+//                Image(systemName: "person.circle.fill")
+//                    .font(.title2)
+//                    .foregroundColor(DriveBayTheme.accent)
+//            }
+//            .padding(.trailing, 15)
+//        }
+//        .buttonStyle(PlainButtonStyle())  // Keeps it clean
+//    }
     private var userMenu: some View {
-        Menu {
+        VStack(spacing: 4) {
             Button {
                 activeSheet = .profile
             } label: {
-                Label("Profile", systemImage: "person.circle.fill")
+                ZStack {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 48, height: 48)
+                        .overlay(
+                            Circle()
+                                .stroke(DriveBayTheme.accent.opacity(0.8), lineWidth: 2.5)
+                                .blur(radius: 6)
+                        )
+                        .shadow(color: DriveBayTheme.glow.opacity(0.6), radius: 12)
+                    
+                    Image(systemName: "person.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(DriveBayTheme.accent)
+                }
             }
-            Divider()
-            Button("Logout", systemImage: "arrow.right.square") { onLogout() }
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 44, height: 44)
-                    .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
-                
-                Circle()
-                    .stroke(DriveBayTheme.glow.opacity(0.6), lineWidth: 1)
-                    .frame(width: 44, height: 44)
-                    .blur(radius: 5)
-                
-                Image(systemName: "person.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(DriveBayTheme.accent)
-            }
+            .buttonStyle(ScaleButtonStyle())
+            
+            Text("Profile")
+                .font(.caption2.bold())
+                .foregroundColor(.white.opacity(0.7))
         }
         .padding(.trailing, 15)
     }
-
+    
     private var heroWelcomeSection: some View {
         VStack(spacing: 24) {
             ZStack {

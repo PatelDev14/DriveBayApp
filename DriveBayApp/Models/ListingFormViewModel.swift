@@ -47,7 +47,11 @@ final class ListingFormViewModel: ObservableObject {
     private var editingListingID: String?
 
     // MARK: - Init
-    init() {}
+    init() {
+        if let userEmail = Auth.auth().currentUser?.email, !userEmail.isEmpty {
+                    self.contactEmail = userEmail
+                }
+    }
 
     // MARK: - Load Existing Listing
     func loadListing(_ listing: Listing) {
@@ -62,6 +66,9 @@ final class ListingFormViewModel: ObservableObject {
         startTime = listing.startTime
         endTime = listing.endTime
         contactEmail = listing.contactEmail
+        if contactEmail.isEmpty, let userEmail = Auth.auth().currentUser?.email {
+                    contactEmail = userEmail
+        }
         editingListingID = listing.id
     }
 

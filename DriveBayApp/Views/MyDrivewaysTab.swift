@@ -68,7 +68,10 @@ struct MyDrivewaysTab: View {
             } message: {
                 Text("This driveway and all its data will be permanently removed.")
             }
-            .onAppear(perform: loadMyListings)
+            .onAppear {
+                cleanupExpiredListings()
+                loadMyListings()
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -239,4 +242,38 @@ struct MyDrivewaysTab: View {
                 self.listings = snapshot?.documents.compactMap { try? $0.data(as: Listing.self) } ?? []
             }
     }
-}
+    
+    private func cleanupExpiredListings() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let today = Calendar.current.startOfDay(for: Date())
+        
+        Firestore.firestore().collection("listings")
+            .whereField("ownerId", isEqualTo: uid)
+            .getDocuments { snapshot, error in
+                guard let documents = snapshot?.documents, error == nil else {
+                    print("Cleanup error: \(error?.localizedDescription ?? "Unknown")")
+                    return
+                }
+                
+                for doc in documents {
+                    guard let listing = try? doc.data(as: Listing.self) else { continue }
+                    
+                    // No need for if let — date is non-optional
+                    let listingDate = listing.date
+                    
+                    // Compare only the date part (start of day)
+                    if Calendar.current.compare(listingDate, to: today, toGranularity: .day) == .orderedAscending {
+                        // Expired → delete
+                        Firestore.firestore().collection("listings").document(doc.documentID).delete { err in
+                            if let err = err {
+                                print("Failed to delete expired listing \(doc.documentID): \(err)")
+                            } else {
+                                print("Deleted expired listing for date: \(listingDate.formatted(date: .abbreviated, time: .omitted))")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }

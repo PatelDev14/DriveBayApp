@@ -39,20 +39,27 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back") { dismiss() }
+                    Button("Back") {
+                                if isEditing {
+                                    withAnimation(.spring()) {
+                                        isEditing = false
+                                    }
+                                } else {
+                                    dismiss()
+                                }
+                            }
                         .foregroundColor(.white.opacity(0.9))
                         .fontWeight(.semibold)
                 }
             }
             .onChange(of: selectedPhoto) { handlePhotoSelection($0) }
-            // MODIFIER 2: App Phase (Safari return check)
-                        .onChange(of: scenePhase) { _, newPhase in
-                            if newPhase == .active {
-                                if let stripeID = viewModel.stripeAccountId, !stripeID.isEmpty {
-                                    viewModel.fetchStripeStatus()
-                                }
-                            }
-                        }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    if let stripeID = viewModel.stripeAccountId, !stripeID.isEmpty {
+                        viewModel.fetchStripeStatus()
+                    }
+                }
+            }
             .onAppear { onAppearSetup() }
             .alert("Delete Profile?", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -184,24 +191,11 @@ struct ProfileView: View {
             .cornerRadius(16)
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
             
-            Button {
+            // Unified button style
+            primaryButton(title: "Save Changes", isLoading: viewModel.isSaving) {
                 viewModel.saveProfile()
                 withAnimation(.spring()) { isEditing = false }
-            } label: {
-                if viewModel.isSaving {
-                    ProgressView().tint(.white)
-                } else {
-                    Text("Save Changes")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(DriveBayTheme.accent)
-                        .foregroundColor(.white)
-                        .cornerRadius(16)
-                        .shadow(color: DriveBayTheme.glow.opacity(0.4), radius: 10, y: 5)
-                }
             }
-            .padding(.top, 10)
         }
         .padding(.horizontal, 24)
         .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -221,13 +215,13 @@ struct ProfileView: View {
             .cornerRadius(24)
             .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.1), lineWidth: 1))
             
-            // MARK: - Stripe Payout Section
+            // MARK: - Stripe Payout Section (updated buttons)
             VStack(spacing: 12) {
                 profileSectionLabel("PAYOUT SETTINGS")
                 
                 if let stripeID = viewModel.stripeAccountId, !stripeID.isEmpty {
                     if viewModel.isStripeVerified {
-                        // STATE 1: TRULY VERIFIED
+                        // Verified state
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "checkmark.seal.fill")
@@ -245,18 +239,12 @@ struct ProfileView: View {
                             .cornerRadius(16)
                             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.green.opacity(0.3), lineWidth: 1))
                             
-                            // Allow them to edit/manage bank info
-                            Button {
+                            secondaryButton(title: "Manage Payout Method") {
                                 startStripeOnboarding()
-                            } label: {
-                                Text("Manage Payout Method")
-                                    .font(.caption.bold())
-                                    .foregroundColor(DriveBayTheme.accent)
-                                    .padding(.leading, 4)
                             }
                         }
                     } else {
-                        // STATE 2: STARTED BUT NOT FINISHED
+                        // Incomplete state
                         VStack(spacing: 12) {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
@@ -275,35 +263,15 @@ struct ProfileView: View {
                             .background(Color.orange.opacity(0.1))
                             .cornerRadius(16)
                             
-                            Button {
+                            primaryButton(title: "Continue Registration") {
                                 startStripeOnboarding()
-                            } label: {
-                                Text("Continue Registration")
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(DriveBayTheme.accent)
-                                    .foregroundColor(.black)
-                                    .cornerRadius(12)
                             }
                         }
                     }
                 } else {
-                    // STATE 3: NOT STARTED AT ALL
-                    Button {
+                    // Not started state
+                    primaryButton(title: "Setup Payouts to Earn") {
                         startStripeOnboarding()
-                    } label: {
-                        HStack {
-                            Image(systemName: "creditcard.and.123")
-                            Text("Setup Payouts to Earn")
-                                .font(.headline)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(DriveBayTheme.accent)
-                        .foregroundColor(.black)
-                        .cornerRadius(16)
-                        .shadow(color: DriveBayTheme.glow.opacity(0.4), radius: 10, y: 5)
                     }
                     .disabled(viewModel.isLoading)
                     .overlay(viewModel.isLoading ? ProgressView().tint(.black) : nil)
@@ -311,44 +279,85 @@ struct ProfileView: View {
             }
             .padding(.bottom, 10)
             
+            // MARK: - Action Buttons (unified style)
             VStack(spacing: 16) {
-                Button {
+                primaryButton(title: "Edit Profile") {
                     withAnimation(.spring()) { isEditing = true }
-                } label: {
-                    Text("Edit Profile")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.white.opacity(0.08))
-                        .foregroundColor(.white)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(DriveBayTheme.accent.opacity(0.4), lineWidth: 1))
                 }
                 
-                Button(action: onLogout) {
-                    Label("Logout", systemImage: "arrow.right.square")
-                        .font(.headline)
-                        .foregroundColor(.red.opacity(0.8))
-                        .padding(.top, 10)
+                dangerButton(title: "Logout", icon: "arrow.right.square") {
+                    onLogout()
                 }
                 
-                Button {
+                dangerButton(title: "Delete Profile", icon: "trash.fill") {
                     showDeleteConfirmation = true
-                } label: {
-                    Label("Delete Profile", systemImage: "trash.fill")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.red.opacity(0.15))
-                        .foregroundColor(.red)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.red.opacity(0.5), lineWidth: 1))
                 }
             }
         }
         .padding(.horizontal, 24)
         .transition(.move(edge: .leading).combined(with: .opacity))
     }
+    
+    // MARK: - Unified Button Styles
+    
+    private func primaryButton(title: String, isLoading: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                if isLoading {
+                    ProgressView().tint(.black)
+                } else {
+                    Text(title)
+                        .font(.headline)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(DriveBayTheme.accent)
+            .foregroundColor(.black)
+            .cornerRadius(16)
+            .shadow(color: DriveBayTheme.glow.opacity(0.4), radius: 10, y: 5)
+        }
+    }
+    
+    private func secondaryButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.white.opacity(0.08))
+                .foregroundColor(DriveBayTheme.accent)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(DriveBayTheme.accent.opacity(0.4), lineWidth: 1)
+                )
+        }
+    }
+    
+    private func dangerButton(title: String, icon: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                }
+                Text(title)
+            }
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.red.opacity(0.15))
+            .foregroundColor(.red)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(.red.opacity(0.5), lineWidth: 1)
+            )
+            .shadow(color: .red.opacity(0.3), radius: 10, y: 5)
+        }
+    }
+    
+    // MARK: - Other Functions (unchanged)
     
     private func handlePhotoSelection(_ newItem: PhotosPickerItem?) {
         Task {
@@ -369,8 +378,8 @@ struct ProfileView: View {
     private func onAppearSetup() {
         viewModel.loadProfile()
         if let stripeID = viewModel.stripeAccountId, !stripeID.isEmpty {
-                viewModel.fetchStripeStatus()
-            }
+            viewModel.fetchStripeStatus()
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             if viewModel.firstName.isEmpty && viewModel.lastName.isEmpty {
                 withAnimation { isEditing = true }
@@ -378,7 +387,42 @@ struct ProfileView: View {
         }
     }
     
-    // MARK: - Helper Views
+    func startStripeOnboarding() {
+        viewModel.isLoading = true
+        
+        // FIX: Pass the current stripeAccountId to the function
+        let data: [String: Any] = [
+            "stripeAccountId": viewModel.stripeAccountId ?? ""
+        ]
+        
+        Functions.functions().httpsCallable("createStripeAccountLink").call(data) { result, error in
+            if let error = error {
+                print("Stripe Link Error: \(error.localizedDescription)")
+                viewModel.isLoading = false
+                return
+            }
+            
+            if let data = result?.data as? [String: Any],
+               let urlString = data["url"] as? String,
+               let stripeID = data["stripeAccountId"] as? String,
+               let url = URL(string: urlString) {
+                
+                // Save the ID immediately so we don't lose it if they close the app
+                let uid = Auth.auth().currentUser?.uid ?? ""
+                Firestore.firestore().collection("users").document(uid).setData([
+                    "stripeAccountId": stripeID
+                ], merge: true)
+                
+                viewModel.stripeAccountId = stripeID
+                
+                // Open the secure Stripe onboarding page
+                UIApplication.shared.open(url)
+            }
+            viewModel.isLoading = false
+        }
+    }
+    
+    // MARK: - Helper Views (unchanged)
     
     private func fallbackIcon() -> some View {
         Image(systemName: "person.crop.circle.fill")
@@ -414,39 +458,9 @@ struct ProfileView: View {
             Spacer()
         }
     }
-    func startStripeOnboarding() {
-        viewModel.isLoading = true
-        
-        Functions.functions().httpsCallable("createStripeAccountLink").call { result, error in
-            if let error = error {
-                print("Stripe Link Error: \(error.localizedDescription)")
-                viewModel.isLoading = false
-                return
-            }
-            
-            if let data = result?.data as? [String: Any],
-               let urlString = data["url"] as? String,
-               let stripeID = data["stripeAccountId"] as? String,
-               let url = URL(string: urlString) {
-                
-                // 1. Update Firestore so we remember this ID
-                let uid = Auth.auth().currentUser?.uid ?? ""
-                Firestore.firestore().collection("users").document(uid).updateData([
-                    "stripeAccountId": stripeID
-                ])
-                
-                // 2. Refresh local view model
-                viewModel.stripeAccountId = stripeID
-                
-                // 3. Open the onboarding page
-                UIApplication.shared.open(url)
-            }
-            viewModel.isLoading = false
-        }
-    }
 }
 
-// === STYLED TEXTFIELD ===
+// === STYLED TEXTFIELD (unchanged) ===
 private struct GlassTextField: View {
     let placeholder: String
     @Binding var text: String
@@ -471,4 +485,3 @@ private struct GlassTextField: View {
             .accentColor(DriveBayTheme.accent)
     }
 }
-

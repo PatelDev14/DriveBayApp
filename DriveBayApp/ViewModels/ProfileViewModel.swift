@@ -21,7 +21,6 @@ class ProfileViewModel: ObservableObject {
     @Published var stripeAccountId: String? = nil
     @Published var isLoading = false
     @Published var isStripeVerified = false
-    @Published var isLoadingStripe = true
     
     private let db = Firestore.firestore()
     private let functions = Functions.functions()
