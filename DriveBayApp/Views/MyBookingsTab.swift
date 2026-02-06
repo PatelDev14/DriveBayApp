@@ -1,4 +1,3 @@
-// Views/MyBookingsTab.swift
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
@@ -13,6 +12,18 @@ struct MyBookingsTab: View {
     @State private var bookingToReport: Booking?
     @State private var showingReportForm = false
     
+    // NEW: Toggle for History
+    @State private var showHistory = false
+    
+    // NEW: Computed properties to split bookings
+    private var activeBookings: [Booking] {
+        bookings.filter { $0.requestedDate >= Calendar.current.startOfDay(for: Date()) }
+    }
+    
+    private var pastBookings: [Booking] {
+        bookings.filter { $0.requestedDate < Calendar.current.startOfDay(for: Date()) }
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -23,32 +34,36 @@ struct MyBookingsTab: View {
                     ProgressView()
                         .tint(.white)
                         .scaleEffect(1.5)
-                } else if bookings.isEmpty {
-                    emptyStateView
                 } else {
-                    List {
-                        ForEach(bookings) { booking in
-                            BookingCard(
-                                booking: booking,
-                                onDelete: {
-                                    bookingToDelete = booking
-                                    showingDeleteAlert = true
-                                },
-                                onReport: {
-                                    bookingToReport = booking
-                                    showingReportForm = true
+                    VStack {
+                        if (showHistory ? pastBookings : activeBookings).isEmpty {
+                            emptyStateView(isHistory: showHistory)
+                        } else {
+                            List {
+                                ForEach(showHistory ? pastBookings : activeBookings) { booking in
+                                    BookingCard(
+                                        booking: booking,
+                                        onDelete: {
+                                            bookingToDelete = booking
+                                            showingDeleteAlert = true
+                                        },
+                                        onReport: {
+                                            bookingToReport = booking
+                                            showingReportForm = true
+                                        }
+                                    )
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                                 }
-                            )
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                            }
+                            .listStyle(.plain)
+                            .scrollContentBackground(.hidden)
                         }
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("My Bookings")
+            .navigationTitle(showHistory ? "Past Bookings" : "My Bookings")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
@@ -57,6 +72,38 @@ struct MyBookingsTab: View {
                         .foregroundColor(.white.opacity(0.9))
                         .fontWeight(.medium)
                 }
+                
+                // NEW: History Toggle Button
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        withAnimation(.spring()) {
+                            showHistory.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: showHistory ? "clock.arrow.circlepath" : "clock.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                            
+                            Text(showHistory ? "Show Active" : "History")
+                                .font(.footnote.weight(.semibold))
+                        }
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 14)
+                        .background(
+                            Capsule()
+                                .fill(showHistory ? DriveBayTheme.accent : Color.white.opacity(0.12))
+                        )
+                        .foregroundColor(showHistory ? .black : .white)
+                        .shadow(
+                            color: showHistory
+                                ? DriveBayTheme.accent.opacity(0.5)
+                                : Color.black.opacity(0.25),
+                            radius: showHistory ? 10 : 6,
+                            y: 4
+                        )
+                    }
+                }
+
             }
             .onAppear {
                 fetchMyBookings()
@@ -80,8 +127,8 @@ struct MyBookingsTab: View {
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - Empty State
-    private var emptyStateView: some View {
+    // MARK: - Updated Empty State
+    private func emptyStateView(isHistory: Bool) -> some View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
@@ -89,7 +136,7 @@ struct MyBookingsTab: View {
                     .frame(width: 160, height: 160)
                     .blur(radius: 20)
                 
-                Image(systemName: "ticket.fill")
+                Image(systemName: isHistory ? "archivebox.fill" : "ticket.fill")
                     .font(.system(size: 70))
                     .foregroundStyle(
                         LinearGradient(colors: [DriveBayTheme.accent, .white], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -98,11 +145,11 @@ struct MyBookingsTab: View {
             }
             
             VStack(spacing: 8) {
-                Text("No Bookings Yet")
+                Text(isHistory ? "No Past Bookings" : "No Bookings Yet")
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundColor(.white)
                 
-                Text("Your approved bookings will appear here once a host accepts your request.")
+                Text(isHistory ? "You haven't completed any driveway bookings yet." : "Your approved bookings will appear here once a host accepts your request.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
@@ -121,7 +168,7 @@ struct MyBookingsTab: View {
         Firestore.firestore().collection("bookings")
             .whereField("renterId", isEqualTo: uid)
             .whereField("hiddenByRenter", isEqualTo: false)
-            .order(by: "createdAt", descending: true)
+            .order(by: "requestedDate", descending: true)
             .addSnapshotListener { snapshot, error in
                 isLoading = false
                 if let error = error {
@@ -149,6 +196,10 @@ struct MyBookingsTab: View {
     }
 }
 
+
+
+
+// ... BookingCard remains the same ...
 // MARK: - Booking Card (Renter side)
 private struct BookingCard: View {
     let booking: Booking

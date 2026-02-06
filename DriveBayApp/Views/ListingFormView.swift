@@ -20,6 +20,7 @@ struct ListingFormView: View {
     @State private var addressSuggestions: [CLPlacemark] = []
     private let geocoder = CLGeocoder()
     @State private var geocodeWorkItem: DispatchWorkItem?
+    @State private var isFillingFromSuggestion = false
     
     // States/Provinces with full names
     private let usStates: [(code: String, name: String)] = [
@@ -221,6 +222,10 @@ struct ListingFormView: View {
                     text: $viewModel.address
                 )
                 .onChange(of: viewModel.address) { newValue in
+                    guard !isFillingFromSuggestion else {
+                            isFillingFromSuggestion = false
+                            return
+                        }
                     debounceGeocode(newValue)
                 }
 
@@ -314,6 +319,7 @@ struct ListingFormView: View {
     
     // MARK: - Fill fields from selected suggestion
     private func fillFromPlacemark(_ placemark: CLPlacemark) {
+        isFillingFromSuggestion = true
         let streetNumber = placemark.subThoroughfare ?? ""
         let streetName = placemark.thoroughfare ?? ""
         viewModel.address = [streetNumber, streetName].filter { !$0.isEmpty }.joined(separator: " ")

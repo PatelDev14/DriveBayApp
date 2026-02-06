@@ -58,28 +58,49 @@ struct ListingCardView: View {
     
     private var timeAndDescriptionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                Image(systemName: "clock.fill")
-                    .foregroundStyle(.purple)
-                
-                Text("\(listing.startTime) – \(listing.endTime)")
-                    .font(.subheadline)
+            // --- Date and Distance Row ---
+            HStack(spacing: 8) {
+                Image(systemName: "calendar")
+                    .font(.caption)
                     .foregroundStyle(DriveBayTheme.accent)
+                
+                // Displays as "Feb 4, 2026" or similar based on user locale
+                Text(listing.date.formatted(date: .abbreviated, time: .omitted))
+                    .font(.subheadline.bold())
+                    .foregroundColor(.white)
                 
                 Spacer()
                 
                 if let distance = listing.distanceFromUser {
                     Text(String(format: "%.1f km away", distance))
-                        .font(.caption)
+                        .font(.caption2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(8)
                         .foregroundColor(.white.opacity(0.6))
                 }
             }
             
+            // --- Time Row ---
+            HStack(spacing: 8) {
+                Image(systemName: "clock.fill")
+                    .font(.caption)
+                    .foregroundStyle(.purple)
+                
+                Text("\(listing.startTime) – \(listing.endTime)")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(DriveBayTheme.accent)
+            }
+            
+            // --- Description Section ---
             if let description = listing.description, !description.isEmpty {
                 Text(description)
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.white.opacity(0.7))
                     .lineLimit(2)
+                    .padding(.top, 4)
             }
         }
     }

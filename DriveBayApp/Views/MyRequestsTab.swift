@@ -3,6 +3,121 @@ import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
+//struct RequestsView: View {
+//    @Environment(\.dismiss) private var dismiss
+//    
+//    let listing: Listing?
+//    @State private var requests: [Booking] = []
+//    @State private var isLoading = true
+//    @State private var isUpdating = false
+//    @State private var requestToDelete: Booking?
+//    @State private var showingDeleteAlert = false
+//    @State private var bookingToReport: Booking?
+//    @State private var showingReportForm = false
+//    
+//    private let emailService = EmailService()
+//    
+//    var body: some View {
+//        NavigationStack {
+//            ZStack {
+//                AnimatedGradientBackground()
+//                    .ignoresSafeArea()
+//                
+//                if isLoading {
+//                    ProgressView()
+//                        .tint(.white)
+//                        .scaleEffect(1.5)
+//                } else if requests.isEmpty {
+//                    emptyRequestsView
+//                } else {
+//                    List {
+//                        ForEach(requests) { request in
+//                            IncomingRequestCard(
+//                                request: request,
+//                                isUpdating: isUpdating,
+//                                onUpdateStatus: { status in
+//                                    updateStatus(request: request, newStatus: status)
+//                                },
+//                                onDelete: {
+//                                    requestToDelete = request
+//                                    showingDeleteAlert = true
+//                                },
+//                                onReport: {
+//                                    bookingToReport = request
+//                                    showingReportForm = true
+//                                }
+//                            )
+//                            .listRowBackground(Color.clear)
+//                            .listRowSeparator(.hidden)
+//                            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+//                        }
+//                    }
+//                    .listStyle(.plain)
+//                    .scrollContentBackground(.hidden)
+//                }
+//            }
+//            .navigationTitle("Incoming Requests")
+//            .navigationBarTitleDisplayMode(.large)
+//            .toolbar {
+//                ToolbarItem(placement: .navigationBarLeading) {
+//                    Button("Back") { dismiss() }
+//                        .foregroundColor(.white.opacity(0.9))
+//                        .fontWeight(.semibold)
+//                }
+//            }
+//            .onAppear {
+//                fetchRequests()
+//            }
+//            .alert("Remove Request?", isPresented: $showingDeleteAlert) {
+//                Button("Cancel", role: .cancel) { }
+//                Button("Remove", role: .destructive) {
+//                    if let request = requestToDelete {
+//                        deleteRequest(request)
+//                    }
+//                }
+//            } message: {
+//                Text("This will remove the request from your list.")
+//            }
+//            .sheet(isPresented: $showingReportForm) {
+//                if let booking = bookingToReport {
+//                    ReportFormView(booking: booking, asRenter: false)
+//                }
+//            }
+//        }
+//        .preferredColorScheme(.dark)
+//    }
+//    
+//    private var emptyRequestsView: some View {
+//        VStack(spacing: 24) {
+//            ZStack {
+//                Circle()
+//                    .fill(DriveBayTheme.glow.opacity(0.15))
+//                    .frame(width: 160, height: 160)
+//                    .blur(radius: 20)
+//                
+//                Image(systemName: "tray.and.arrow.down.fill")
+//                    .font(.system(size: 70))
+//                    .foregroundStyle(
+//                        LinearGradient(colors: [DriveBayTheme.accent, .white], startPoint: .topLeading, endPoint: .bottomTrailing)
+//                    )
+//                    .shadow(color: DriveBayTheme.glow.opacity(0.5), radius: 20)
+//            }
+//            
+//            VStack(spacing: 8) {
+//                Text("No Requests")
+//                    .font(.system(size: 28, weight: .black, design: .rounded))
+//                    .foregroundColor(.white)
+//                
+//                Text("New requests for your parking bays will appear here.")
+//                    .font(.subheadline)
+//                    .foregroundColor(.white.opacity(0.6))
+//                    .multilineTextAlignment(.center)
+//                    .padding(.horizontal, 50)
+//            }
+//        }
+//        .padding(.top, 60)
+//    }
+    
 struct RequestsView: View {
     @Environment(\.dismiss) private var dismiss
     
@@ -15,7 +130,19 @@ struct RequestsView: View {
     @State private var bookingToReport: Booking?
     @State private var showingReportForm = false
     
+    // NEW: Toggle for History
+    @State private var showHistory = false
+    
     private let emailService = EmailService()
+    
+    // NEW: Computed properties to split requests
+    private var activeRequests: [Booking] {
+        requests.filter { $0.requestedDate >= Calendar.current.startOfDay(for: Date()) }
+    }
+    
+    private var pastRequests: [Booking] {
+        requests.filter { $0.requestedDate < Calendar.current.startOfDay(for: Date()) }
+    }
     
     var body: some View {
         NavigationStack {
@@ -27,48 +154,78 @@ struct RequestsView: View {
                     ProgressView()
                         .tint(.white)
                         .scaleEffect(1.5)
-                } else if requests.isEmpty {
-                    emptyRequestsView
                 } else {
-                    List {
-                        ForEach(requests) { request in
-                            IncomingRequestCard(
-                                request: request,
-                                isUpdating: isUpdating,
-                                onUpdateStatus: { status in
-                                    updateStatus(request: request, newStatus: status)
-                                },
-                                onDelete: {
-                                    requestToDelete = request
-                                    showingDeleteAlert = true
-                                },
-                                onReport: {
-                                    bookingToReport = request
-                                    showingReportForm = true
+                    VStack {
+                        // Updated to use the toggle logic for empty states and list data
+                        if (showHistory ? pastRequests : activeRequests).isEmpty {
+                            emptyRequestsView(isHistory: showHistory)
+                        } else {
+                            List {
+                                ForEach(showHistory ? pastRequests : activeRequests) { request in
+                                    IncomingRequestCard(
+                                        request: request,
+                                        isUpdating: isUpdating,
+                                        onUpdateStatus: { status in
+                                            updateStatus(request: request, newStatus: status)
+                                        },
+                                        onDelete: {
+                                            requestToDelete = request
+                                            showingDeleteAlert = true
+                                        },
+                                        onReport: {
+                                            bookingToReport = request
+                                            showingReportForm = true
+                                        }
+                                    )
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                                 }
-                            )
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                            }
+                            .listStyle(.plain)
+                            .scrollContentBackground(.hidden)
                         }
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("Incoming Requests")
+            .navigationTitle(showHistory ? "Past Requests" : "Incoming Requests")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Back") { dismiss() }
                         .foregroundColor(.white.opacity(0.9))
                         .fontWeight(.semibold)
                 }
+                
+                // NEW: History Toggle Button (Matching MyBookings style)
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { fetchRequests() } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.headline)
-                            .foregroundColor(DriveBayTheme.accent)
+                    Button {
+                        withAnimation(.spring()) {
+                            showHistory.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: showHistory ? "clock.arrow.circlepath" : "clock.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                            
+                            Text(showHistory ? "Show Active" : "History")
+                                .font(.footnote.weight(.semibold))
+                        }
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 14)
+                        .background(
+                            Capsule()
+                                .fill(showHistory ? DriveBayTheme.accent : Color.white.opacity(0.12))
+                        )
+                        .foregroundColor(showHistory ? .black : .white)
+                        .shadow(
+                            color: showHistory
+                                ? DriveBayTheme.accent.opacity(0.5)
+                                : Color.black.opacity(0.25),
+                            radius: showHistory ? 10 : 6,
+                            y: 4
+                        )
                     }
                 }
             }
@@ -94,7 +251,8 @@ struct RequestsView: View {
         .preferredColorScheme(.dark)
     }
     
-    private var emptyRequestsView: some View {
+    // MARK: - Updated Empty State (Added isHistory parameter)
+    private func emptyRequestsView(isHistory: Bool) -> some View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
@@ -102,7 +260,7 @@ struct RequestsView: View {
                     .frame(width: 160, height: 160)
                     .blur(radius: 20)
                 
-                Image(systemName: "tray.and.arrow.down.fill")
+                Image(systemName: isHistory ? "archivebox.fill" : "tray.and.arrow.down.fill")
                     .font(.system(size: 70))
                     .foregroundStyle(
                         LinearGradient(colors: [DriveBayTheme.accent, .white], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -111,11 +269,11 @@ struct RequestsView: View {
             }
             
             VStack(spacing: 8) {
-                Text("No Requests")
+                Text(isHistory ? "No Past Requests" : "No Requests")
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundColor(.white)
                 
-                Text("New requests for your parking bays will appear here.")
+                Text(isHistory ? "You don't have any archived requests for this driveway." : "New requests for your parking bays will appear here.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
@@ -124,7 +282,8 @@ struct RequestsView: View {
         }
         .padding(.top, 60)
     }
-    
+
+
     private func fetchRequests() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         
