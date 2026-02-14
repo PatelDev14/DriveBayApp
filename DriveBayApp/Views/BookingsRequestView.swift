@@ -17,6 +17,13 @@ struct BookingRequestView: View {
     
     private let emailService = EmailService()
     
+    private var currentTotal: Double {
+        let start = timeToMinutes(startTime)
+        let end = timeToMinutes(endTime)
+        let duration = Double(max(0, end - start)) / 60.0
+        return duration * listing.rate
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -104,13 +111,31 @@ struct BookingRequestView: View {
                         }
                         .padding(.horizontal)
                         
-                        // MARK: - Error Message
-                        if let error = errorMessage {
-                            Text(error)
-                                .foregroundColor(.red)
-                                .font(.callout)
-                                .padding(.horizontal)
+                        // MARK: - Price Summary & Error
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text("Total Amount:")
+                                    .foregroundColor(.white.opacity(0.7))
+                                Spacer()
+                                Text("$\(String(format: "%.2f", currentTotal))")
+                                    .font(.title3.bold())
+                                    .foregroundColor(currentTotal >= 5.0 ? .green : .red)
+                            }
+                            
+                            if currentTotal < 5.0 {
+                                Text("Minimum booking is $5.00")
+                                    .font(.caption)
+                                    .foregroundColor(.red.opacity(0.8))
+                            }
+                            
+                            if let error = errorMessage {
+                                Text(error)
+                                    .foregroundColor(.red)
+                                    .font(.callout)
+                                    .padding(.top, 4)
+                            }
                         }
+                        .padding(.horizontal, 25)
                         
                         // MARK: - Send Button
                         Button(action: sendBookingRequest) {
@@ -185,6 +210,11 @@ struct BookingRequestView: View {
         let durationInMinutes = Double(requestedEnd - requestedStart)
         let hours = durationInMinutes / 60.0
         let calculatedTotal = hours * listing.rate
+        
+        guard calculatedTotal >= 5.0 else {
+            errorMessage = "Total must be at least $5.00 to cover processing fees. (Currently: $\(String(format: "%.2f", calculatedTotal)))"
+            return
+        }
         // ----------------------------------
 
         isSending = true

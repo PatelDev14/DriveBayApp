@@ -129,14 +129,35 @@ struct PaymentView: View {
                 }
             }
             .navigationBarTitle("", displayMode: .inline)  // Hides title completely
-            }
-            .fullScreenCover(item: $viewModel.paymentWrapper) { wrapper in
-                PaymentSheetFullScreenView(paymentSheet: wrapper.sheet) { result in
-                    viewModel.handlePaymentResult(result, for: booking)
+        }
+        
+        .navigationBarBackButtonHidden(true)
+        .onChange(of: viewModel.paymentWrapper?.id) { _ in
+            if let wrapper = viewModel.paymentWrapper {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootVC = windowScene.windows.first?.rootViewController {
+                    
+                    var topVC = rootVC
+                    while let presented = topVC.presentedViewController {
+                        topVC = presented
+                    }
+                    
+                    wrapper.sheet.present(from: topVC) { result in
+                        switch result {
+                        case .failed(let error):
+                            print("STRIPE DEBUG ERROR: \(error.localizedDescription)")
+                        case .completed:
+                            viewModel.handlePaymentResult(result, for: booking)
+                        case .canceled:
+                            print("User cancelled")
+                        }
+                        viewModel.paymentWrapper = nil
+                    }
                 }
             }
         }
     }
+}
 
 // MARK: - FIXED Full-Screen Stripe Sheet
 struct PaymentSheetFullScreenView: UIViewControllerRepresentable {
@@ -150,13 +171,25 @@ struct PaymentSheetFullScreenView: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        if uiViewController.presentedViewController == nil {
-            DispatchQueue.main.async {
+        // Only present if we aren't already presenting something
+        if uiViewController.presentedViewController == nil && !context.coordinator.isPresenting {
+            context.coordinator.isPresenting = true
+            
+            // Small delay ensures the fullScreenCover animation has finished
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 paymentSheet.present(from: uiViewController) { result in
                     completion(result)
-                    uiViewController.dismiss(animated: true)
+                    context.coordinator.isPresenting = false
                 }
             }
         }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator {
+        var isPresenting = false
     }
 }
