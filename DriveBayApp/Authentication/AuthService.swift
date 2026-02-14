@@ -30,6 +30,15 @@ class AuthService: ObservableObject {
     
     // MARK: - Email and Password
     func signUp(email: String, password: String) async throws {
+        guard password.count >= 8 else {
+            throw AuthError.general("Password must be at least 8 characters long.")
+        }
+        guard password.range(of: "[A-Z]", options: .regularExpression) != nil else {
+            throw AuthError.general("Password must contain at least one uppercase letter.")
+        }
+        guard password.range(of: "[0-9]", options: .regularExpression) != nil else {
+            throw AuthError.general("Password must contain at least one number.")
+        }
         let _ = try await Auth.auth().createUser(withEmail: email, password: password)
     }
     

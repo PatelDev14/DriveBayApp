@@ -53,13 +53,6 @@ struct ProfileView: View {
                 }
             }
             .onChange(of: selectedPhoto) { handlePhotoSelection($0) }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active {
-                    if let stripeID = viewModel.stripeAccountId, !stripeID.isEmpty {
-                        viewModel.fetchStripeStatus()
-                    }
-                }
-            }
             .onAppear { onAppearSetup() }
             .alert("Delete Profile?", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}

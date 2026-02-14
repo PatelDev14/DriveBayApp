@@ -424,6 +424,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DriveBayApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DriveBay;
 				INFOPLIST_KEY_NSCameraUsageDescription = "DriveBay may use the camera to scan credit cards for faster payment.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "DriveBay needs your location to find parking spots near you.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Not used, but required by payment SDK.";
@@ -463,6 +464,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DriveBayApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DriveBay;
 				INFOPLIST_KEY_NSCameraUsageDescription = "DriveBay may use the camera to scan credit cards for faster payment.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "DriveBay needs your location to find parking spots near you.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Not used, but required by payment SDK.";
@@ -478,7 +480,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.DriveBayApp;
+				PRODUCT_BUNDLE_IDENTIFIER = app.DriveBay;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

@@ -57,7 +57,7 @@ class PaymentViewModel: ObservableObject {
                     var config = PaymentSheet.Configuration()
                     config.merchantDisplayName = "DriveBay"
                     config.style = .alwaysDark
-                    config.applePay = .init(merchantId: "merchant.com.drivebay", merchantCountryCode: "CA")
+                    config.applePay = .init(merchantId: "merchant.com.drivebay.app", merchantCountryCode: "CA")
                     
                     self.paymentWrapper = PaymentSheetWrapper(sheet: PaymentSheet(paymentIntentClientSecret: clientSecret, configuration: config))
                 }
