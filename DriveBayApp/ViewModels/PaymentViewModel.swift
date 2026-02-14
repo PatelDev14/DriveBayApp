@@ -5,6 +5,7 @@ import FirebaseFunctions
 import FirebaseAuth
 import FirebaseFirestore
 import Combine
+internal import PassKit
 
 // Wrapper for SwiftUI sheet/fullScreenCover
 struct PaymentSheetWrapper: Identifiable {
@@ -25,53 +26,48 @@ class PaymentViewModel: ObservableObject {
         
         Task {
             do {
-                // 1. Fetch Host's Stripe ID
+                // 1. Get Host ID from Firestore
                 let snapshot = try await Firestore.firestore()
                     .collection("users")
                     .document(booking.listingOwnerId)
                     .getDocument()
                 
-                let hostStripeID = snapshot.data()?["stripeAccountId"] as? String
-                
-                // 2. Safety Check: If host hasn't set up Stripe, stop here
-                guard let destinationID = hostStripeID, !destinationID.isEmpty else {
+                guard let hostStripeID = snapshot.data()?["stripeAccountId"] as? String else {
                     self.isLoading = false
-                    self.errorMessage = "This host hasn't set up their payouts yet."
+                    self.errorMessage = "Host payout not configured."
                     return
                 }
-                
-                let country = booking.country?.lowercased() ?? "united states"
-                let selectedCurrency = (country == "canada") ? "cad" : "usd"
-                
+
+                // 2. Prepare Data (Stripe expects Integers for cents)
+                let amountInCents = Int(round(totalAmount * 100))
                 let data: [String: Any] = [
-                    "amount": totalAmount,
+                    "amount": amountInCents,
                     "bookingId": booking.id ?? "unknown",
-                    "currency": selectedCurrency,
-                    "customerEmail": Auth.auth().currentUser?.email ?? "",
-                    "destinationAccount": destinationID
+                    "currency": (booking.country?.lowercased() == "canada") ? "cad" : "usd",
+                    "destinationAccount": hostStripeID,
+                    "applicationFeePercent": 0.25
                 ]
+
+                let result = try await Functions.functions().httpsCallable("createPaymentIntent").call(data)
                 
-                // 3. Call the Cloud Function
-                let result = try await Functions.functions()
-                    .httpsCallable("createPaymentIntent")
-                    .call(data)
-                
-                // 4. Handle result on the Main Thread
+                // 4. Extract Secret
                 if let resultData = result.data as? [String: Any],
                    let clientSecret = resultData["clientSecret"] as? String {
                     
                     var config = PaymentSheet.Configuration()
                     config.merchantDisplayName = "DriveBay"
                     config.style = .alwaysDark
+                    config.applePay = .init(merchantId: "merchant.com.drivebay", merchantCountryCode: "CA")
                     
                     self.paymentWrapper = PaymentSheetWrapper(sheet: PaymentSheet(paymentIntentClientSecret: clientSecret, configuration: config))
                 }
                 
                 self.isLoading = false
-                
-            } catch {
+            }
+           catch {
                 self.isLoading = false
-                self.errorMessage = "Setup failed: \(error.localizedDescription)"
+                self.errorMessage = error.localizedDescription
+                print("Payment Error: \(error)")
             }
         }
     }
