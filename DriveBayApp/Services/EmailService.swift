@@ -94,10 +94,10 @@ actor EmailService {
                     <li><strong>Amount Paid:</strong> $\(String(format: "%.2f", amount))</li>
                 </ul>
                 <hr style="border: 1px solid #eee; margin: 20px 0;">
-                <p>The funds will be released to you 24 hours after the booking ends.</p>
+                <p>The funds will be available to you after 7 business days, and you will be able to do a payout from your stripe account.</p>
                 <p>Thank you for hosting on DriveBay! 🚗</p>
                 <p style="color: #666; font-size: 0.9em; margin-top: 30px;">
-                    DriveBay Team<br>no-reply@dev-patel.ca
+                    DriveBay Team<br>contact@drivebay.ca
                 </p>
             </div>
             """

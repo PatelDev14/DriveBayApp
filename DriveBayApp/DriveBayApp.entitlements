@@ -7,6 +7,8 @@
 		<string>Default</string>
 	</array>
 	<key>com.apple.developer.in-app-payments</key>
-	<array/>
+	<array>
+		<string>merchant.com.drivebay.app</string>
+	</array>
 </dict>
 </plist>

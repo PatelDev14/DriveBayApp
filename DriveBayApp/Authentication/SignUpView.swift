@@ -101,6 +101,22 @@ struct SignUpView: View {
                             .background(Color.white.opacity(0.08))
                             .cornerRadius(18)
                             
+                            // NEW: Password Requirements Helper Text
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Password must be at least 8 characters long")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.7))
+                                
+                                Text("Include at least one uppercase letter")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.7))
+                                
+                                Text("Include at least one number")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
+                            .padding(.horizontal, 18)
+
                             // Error
                             if let errorMessage {
                                 Text(errorMessage)
@@ -161,8 +177,21 @@ struct SignUpView: View {
             return
         }
         
-        guard password.count >= 6 else {
-            errorMessage = "Password must be at least 6 characters."
+        // 2. Check minimum length (updated from 6 to 8)
+        guard password.count >= 8 else {
+            errorMessage = "Password must be at least 8 characters long."
+            return
+        }
+        
+        // 3. Check for at least one uppercase letter
+        guard password.range(of: "[A-Z]", options: .regularExpression) != nil else {
+            errorMessage = "Password must contain at least one uppercase letter."
+            return
+        }
+        
+        // 4. Check for at least one number
+        guard password.range(of: "[0-9]", options: .regularExpression) != nil else {
+            errorMessage = "Password must contain at least one number."
             return
         }
         

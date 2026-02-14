@@ -6,6 +6,13 @@ import Combine
 import FirebaseStorage
 import FirebaseFunctions
 
+enum PayoutStatus {
+    case checking
+    case verified
+    case incomplete
+    case notStarted
+}
+
 @MainActor
 class ProfileViewModel: ObservableObject {
     @Published var firstName = ""
@@ -21,6 +28,7 @@ class ProfileViewModel: ObservableObject {
     @Published var stripeAccountId: String? = nil
     @Published var isLoading = false
     @Published var isStripeVerified = false
+    @Published var payoutStatus: PayoutStatus = .checking
     
     private let db = Firestore.firestore()
     private let functions = Functions.functions()
@@ -69,34 +77,41 @@ class ProfileViewModel: ObservableObject {
     }
     
     func fetchStripeStatus() {
-        guard let id = stripeAccountId, !id.isEmpty else { return }
+        guard let id = stripeAccountId, !id.isEmpty else {
+            self.payoutStatus = .notStarted
+            self.isStripeVerified = false
+            print("fetchStripeStatus skipped – no ID")
+            return
+        }
         
-        // 1. Match your backend function name exactly: "getStripeAccountStatus"
+        self.payoutStatus = .checking
+        
         functions.httpsCallable("getStripeAccountStatus").call(["stripeAccountId": id]) { [weak self] result, error in
             DispatchQueue.main.async {
                 if let error = error {
                     print("Stripe Status Error: \(error.localizedDescription)")
+                    self?.payoutStatus = .incomplete
+                    self?.isStripeVerified = false
+                    self?.errorMessage = "Failed to check payout status"
                     return
                 }
-
-                if let data = result?.data as? [String: Any] {
-                    // 2. Match your backend key name: "isEnabled"
-                    // Also check "detailsSubmitted" as a backup
-                    let verified = data["isEnabled"] as? Bool ?? false
-                    let detailsSubmitted = data["detailsSubmitted"] as? Bool ?? false
-                    
-                    // We consider them "Verified" if they've at least submitted their details
-                    self?.isStripeVerified = verified || detailsSubmitted
-                    
-                    print("Stripe Sync - Enabled: \(verified), Submitted: \(detailsSubmitted)")
-                    
-                    // If they are still not verified, retry in 5 seconds
-                    if !(verified || detailsSubmitted) {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                            self?.fetchStripeStatus()
-                        }
-                    }
+                
+                guard let data = result?.data as? [String: Any] else {
+                    print("Invalid response from getStripeAccountStatus")
+                    self?.payoutStatus = .incomplete
+                    self?.isStripeVerified = false
+                    return
                 }
+                
+                let verified = data["isEnabled"] as? Bool ?? false
+                let detailsSubmitted = data["detailsSubmitted"] as? Bool ?? false
+                
+                let newStatus = (verified || detailsSubmitted) ? PayoutStatus.verified : .incomplete
+                
+                self?.isStripeVerified = verified || detailsSubmitted
+                self?.payoutStatus = newStatus
+                
+                print("Stripe Sync - Enabled: \(verified), Submitted: \(detailsSubmitted), Status: \(newStatus)")
             }
         }
     }
