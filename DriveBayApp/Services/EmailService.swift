@@ -75,7 +75,7 @@ actor EmailService {
             <p>\(description.replacingOccurrences(of: "\n", with: "<br>"))</p>
             <p>Please review in Firestore > reports collection.</p>
             """
-        try await sendCloudEmail(to: ["devp1400@gmail.com"], subject: "New Report: \(reportType)", html: html)
+        try await sendCloudEmail(to: ["contact@drivebay.ca"], subject: "New Report: \(reportType)", html: html)
     }
     
     // MARK: - 5. Payment Confirmation
