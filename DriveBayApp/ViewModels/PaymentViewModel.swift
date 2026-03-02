@@ -5,7 +5,6 @@ import FirebaseFunctions
 import FirebaseAuth
 import FirebaseFirestore
 import Combine
-internal import PassKit
 
 // Wrapper for SwiftUI sheet/fullScreenCover
 struct PaymentSheetWrapper: Identifiable {
