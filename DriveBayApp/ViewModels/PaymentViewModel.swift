@@ -54,7 +54,7 @@ class PaymentViewModel: ObservableObject {
                    let clientSecret = resultData["clientSecret"] as? String {
                     
                     var config = PaymentSheet.Configuration()
-                    config.merchantDisplayName = "DriveBay"
+                    config.merchantDisplayName = "Parking Host (via DriveBay)"
                     config.style = .alwaysDark
                     config.applePay = .init(merchantId: "merchant.com.drivebay.app", merchantCountryCode: "CA")
                     
